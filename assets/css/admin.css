@@ -1,0 +1,203 @@
+/* ADMIN SHELL */
+.admin-shell{
+  background: #f6f7fb;
+  min-height: 100vh;
+}
+
+:root{
+  --admin-radius: 14px;
+  --admin-border: rgba(15, 23, 42, .08);
+  --admin-shadow: 0 8px 18px rgba(2,6,23,.06);
+  --admin-shadow-soft: 0 6px 14px rgba(2,6,23,.05);
+}
+
+/* Layout */
+.admin-wrap{
+  display:flex;
+  min-height: 100vh;
+  width: 100%;
+}
+
+.admin-main{
+  flex:1;
+  padding: 16px;
+  margin-left: 0;
+}
+
+/* Topbar (less tall + less heavy) */
+.admin-topbar{
+  background:#fff;
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-radius);
+  padding: 10px 12px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  box-shadow: var(--admin-shadow-soft);
+  margin-bottom: 14px;
+}
+.admin-topbar .fw-bold{ font-size: 1rem; }
+
+/* Cards (less puffy) */
+.admin-card{
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-radius);
+  background:#fff;
+  box-shadow: var(--admin-shadow-soft);
+}
+
+/* Stats cards — make them compact */
+.admin-stat{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 12px;
+}
+.admin-stat .stat-icon{
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background: rgba(249,115,22,.10);
+  border: 1px solid rgba(249,115,22,.18);
+  color: var(--orange-700);
+  font-size: 1.2rem;
+}
+.admin-stat .stat-value{
+  font-size: 1.6rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+/* Quick action buttons — less loud */
+.admin-actions .btn{
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-weight: 700;
+}
+
+/* Responsive */
+@media (max-width: 991.98px){
+  .admin-main{ padding: 12px; }
+}
+/* Ensure sidebar never overlaps main content on desktop */
+.admin-wrap{
+  display:flex;
+  width:100%;
+  min-height:100vh;
+}
+
+.admin-sidebar{
+  width: 250px;
+  flex: 0 0 250px;
+  background:#fff;
+  border-right: 1px solid rgba(15, 23, 42, .08);
+}
+
+.admin-main{
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* Sidebar internal layout: column + bottom pinned */
+.admin-sidebar-inner{
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Branding */
+.admin-brand{
+  padding: 14px 14px;
+  border-bottom: 1px solid rgba(15, 23, 42, .08);
+}
+.admin-brand-link{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  text-decoration:none;
+  color: inherit;
+}
+.admin-logo-box{
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight: 900;
+  color:#fff;
+  background: var(--orange-600);
+  box-shadow: 0 8px 16px rgba(249,115,22,.22);
+}
+.admin-brand-name{
+  font-weight: 800;
+  line-height: 1.05;
+}
+.admin-brand-sub{
+  font-size: .82rem;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+/* User block */
+.admin-user{
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(15, 23, 42, .08);
+}
+
+/* Menu scroll area */
+.admin-menu{
+  padding: 10px 10px 12px;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  overflow-y: auto;          /* allows menu scrolling */
+  flex: 1 1 auto;            /* takes remaining height */
+}
+
+/* Bottom pinned area */
+.admin-sidebar-bottom{
+  padding: 12px 14px 16px;
+  border-top: 1px solid rgba(15, 23, 42, .08);
+  background: #fff;
+}
+.admin-foot{
+  margin-top: 10px;
+  font-size: .8rem;
+  color: var(--muted);
+  text-align:center;
+}
+
+/* Desktop: make offcanvas behave as normal sidebar */
+@media (min-width: 992px){
+  .offcanvas-lg.admin-sidebar{
+    position: static !important;
+    transform: none !important;
+    visibility: visible !important;
+  }
+  .offcanvas-lg.admin-sidebar .offcanvas-body{
+    overflow: hidden; /* sidebar handles its own scroll in .admin-menu */
+  }
+  .admin-main {
+    margin-left: 0 !important;
+  }
+}
+
+/* Mobile: sidebar becomes overlay (ok to overlap when opened) */
+@media (max-width: 991.98px){
+  .admin-main{ 
+    padding: 12px; 
+    margin-left: -250px;
+    transition: margin-left 0.3s ease;
+  }
+  .admin-sidebar-inner{ height: 100%; }
+  .admin-sidebar.showing { z-index: 1050; }
+  
+  /* Hide offcanvas backdrop */
+  .offcanvas-backdrop {
+    display: none !important;
+  }
+}

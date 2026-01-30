@@ -1,0 +1,23 @@
+# Alma Tech Consults - URL Routing & Security
+RewriteEngine On
+RewriteBase /almatech_site/
+
+# Prevent direct access to sensitive files
+<Files ~ "^\.">
+  Require all denied
+</Files>
+
+Options -Indexes
+
+# Admin
+RewriteRule ^admin/?$ admin/index.php [L,QSA]
+
+# Home page
+RewriteRule ^home/?$ index.php [L,QSA]
+
+# All other slugs go to page.php for database lookup
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^([a-zA-Z0-9_-]+)/?$ page.php?slug=$1 [L,QSA]
+
+ErrorDocument 404 /almatech_site/404.php
