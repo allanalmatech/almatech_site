@@ -27,7 +27,7 @@ if ($db instanceof mysqli) {
 }
 
 require_once __DIR__ . '/gate.php';
-gate_check($db); // 🚨 MUST RUN BEFORE OUTPUT
+gate_check($db); // MUST RUN BEFORE OUTPUT
 
 /* -------------------------------------------------
  * BASE URL (stable)
@@ -38,6 +38,9 @@ if (!defined('BASE_URL')) {
   $base   = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/');
   define('BASE_URL', $scheme . '://' . $host . $base);
 }
+
+// Make BASE_URL available as variable too
+$BASE = BASE_URL;
 
 /* -------------------------------------------------
  * Navigation defaults
@@ -53,6 +56,16 @@ $visible_links_default = [
   'contact'      => true,
 ];
 
+$nav_items = [
+  'home'         => ['title'=>'Home',         'href'=> $BASE . '/index.php'],
+  'about'        => ['title'=>'About',        'href'=> $BASE . '/about.php'],
+  'services'     => ['title'=>'Services',     'href'=> $BASE . '/services.php'],
+  'projects'     => ['title'=>'Projects',     'href'=> $BASE . '/projects.php'],
+  'blog'         => ['title'=>'Blog',         'href'=> $BASE . '/blog.php'],
+  'team'         => ['title'=>'Team',         'href'=> $BASE . '/team.php'],
+  'testimonials' => ['title'=>'Testimonials', 'href'=> $BASE . '/testimonials.php'],
+  'contact'      => ['title'=>'Contact',      'href'=> $BASE . '/contact.php'],
+];
 $nav_order_default = array_keys($visible_links_default);
 
 /* -------------------------------------------------
@@ -134,7 +147,7 @@ if ($db instanceof mysqli) {
 
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/main.css">
+  <link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/main.css">
 </head>
 <body>
 
@@ -145,9 +158,9 @@ if ($db instanceof mysqli) {
       <i class="bi bi-geo-alt"></i> Mbarara, Uganda
     </div>
     <div class="d-flex gap-2">
-      <i class="bi bi-facebook"></i>
-      <i class="bi bi-instagram"></i>
-      <i class="bi bi-linkedin"></i>
+      <a href="#" class="topbar-link"><i class="bi bi-facebook"></i></a>
+      <a href="#" class="topbar-link"><i class="bi bi-instagram"></i></a>
+      <a href="#" class="topbar-link"><i class="bi bi-linkedin"></i></a>
     </div>
   </div>
 </div>

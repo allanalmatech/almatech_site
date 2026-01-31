@@ -63,7 +63,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $fileInfo = pathinfo($_FILES['photo']['name']);
       $extension = strtolower($fileInfo['extension'] ?? '');
       if (in_array($extension, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
-        $filename = date('Ymd_His') . '_' . bin2hex(random_bytes(4)) . '.' . $extension;
+        $filename = date('Ymd_His') . '_' . substr(md5(uniqid()), 0, 8) . '.' . $extension;
+        // Ensure filename is URL-safe
+        $filename = preg_replace('/[^a-zA-Z0-9_\-\.]/', '', $filename);
         $targetPath = $uploadDir . '/' . $filename;
         
         if (move_uploaded_file($_FILES['photo']['tmp_name'], $targetPath)) {
@@ -156,11 +158,6 @@ require_once __DIR__ . '/../includes/admin_sidebar.php';
         <input class="form-control" name="client_name" value="<?= htmlspecialchars($client_name) ?>" required>
       </div>
       <div class="col-md-6">
-        <label class="form-label">Client Photo</label>
-        <input class="form-control" type="file" name="photo" accept="image/*">
-        <small class="text-muted">Optional: JPG, PNG, GIF, WebP (max 5MB)</small>
-      </div>
-      <div class="col-md-6">
         <label class="form-label">Client Title</label>
         <input class="form-control" name="client_title" value="<?= htmlspecialchars($client_title) ?>">
       </div>
@@ -186,6 +183,12 @@ require_once __DIR__ . '/../includes/admin_sidebar.php';
       <div class="col-md-3">
         <label class="form-label">Sort Order</label>
         <input type="number" class="form-control" name="sort_order" value="<?= (int)$sort_order ?>">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">Client Photo</label>
+        <input class="form-control" type="file" name="photo" accept="image/*">
+        <small class="text-muted">Optional: JPG, PNG, GIF, WebP</small>
       </div>
 
       <div class="col-12">

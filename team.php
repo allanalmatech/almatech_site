@@ -47,7 +47,7 @@ if (!$m) {
 }
 
 // Correct path: main uploads folder
-$img = !empty($m['photo']) ? ($BASE . "uploads/team/" . rawurlencode((string)$m['photo'])) : '';
+$img = !empty($m['photo']) ? ($BASE . "/uploads/team/" . rawurlencode((string)$m['photo'])) : '';
 
 // Skills can be CSV or JSON - support both
 $skills = [];

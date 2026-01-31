@@ -365,6 +365,17 @@ if ($stmt) {
                 </div>
               </div>
 
+              <?php if (!empty($t['rating'])): ?>
+                <div class="mb-2">
+                  <?php
+                    $rating = (int)$t['rating'];
+                    for ($i = 1; $i <= 5; $i++):
+                  ?>
+                    <i class="bi bi-star-fill text-orange<?= $i <= $rating ? '' : '-50' ?>" style="font-size:14px;"></i>
+                  <?php endfor; ?>
+                </div>
+              <?php endif; ?>
+
               <div class="text-muted">
                 <?= nl2br(h((string)($t['message'] ?? ($t['content'] ?? '')))) ?>
               </div>

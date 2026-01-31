@@ -15,9 +15,15 @@ RewriteRule ^admin/?$ admin/index.php [L,QSA]
 # Home page
 RewriteRule ^home/?$ index.php [L,QSA]
 
-# All other slugs go to page.php for database lookup
+# Projects - handle individual project pages
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^projects/([a-zA-Z0-9_-]+)/?$ project.php?slug=$1 [L,QSA]
+
+# All other slugs go to page.php for database lookup (exclude known pages)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_URI} !^/(index|about|services|projects|blog|team|testimonials|contact|admin|assets|includes|uploads|sql)\.php$ [NC]
 RewriteRule ^([a-zA-Z0-9_-]+)/?$ page.php?slug=$1 [L,QSA]
 
 ErrorDocument 404 /almatech_site/404.php

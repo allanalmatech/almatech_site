@@ -39,6 +39,8 @@ $sort_order = (int)$row['sort_order'];
 $project_id = (string)($row['project_id'] ?? '');
 $show_project_link = (int)($row['show_project_link'] ?? 0);
 $photo = (string)($row['photo'] ?? '');
+// Debug: Log the photo filename retrieved from database
+error_log("Testimonial photo filename from DB: " . $photo);
 
 // Load projects list if exists
 $projects = [];
@@ -80,7 +82,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $fileInfo = pathinfo($_FILES['photo']['name']);
       $extension = strtolower($fileInfo['extension'] ?? '');
       if (in_array($extension, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
-        $filename = date('Ymd_His') . '_' . bin2hex(random_bytes(4)) . '.' . $extension;
+        $filename = date('Ymd_His') . '_' . substr(md5(uniqid()), 0, 8) . '.' . $extension;
+        // Ensure filename is URL-safe
+        $filename = preg_replace('/[^a-zA-Z0-9_\-\.]/', '', $filename);
         $targetPath = $uploadDir . '/' . $filename;
         
         if (move_uploaded_file($_FILES['photo']['tmp_name'], $targetPath)) {
@@ -92,6 +96,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
           }
           $newPhoto = $filename;
+          // Debug: Log the filename being stored
+          error_log("Testimonial photo filename stored: " . $filename);
         }
       }
     }
@@ -109,23 +115,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       }
 
       if (empty($errors)) {
-        $sql = "UPDATE testimonials SET client_name=?,client_title=?,company=?,rating=?,message=?,project_id=?,show_project_link=?,status=?,sort_order=? WHERE id=?";
-        $st2 = $db->prepare($sql);
-        $st2->bind_param(
-          "sssisissii",
-          $client_name,
-          $client_title,
-          $company,
-          $ratingInt,
-          $message,
-          $pid,
-          $show_project_link,
-          $status,
-          $sort_order,
-          $id
-        );
-        $st2->execute();
-        $st2->close();
+        $sql = "UPDATE testimonials
+        SET client_name=?, client_title=?, company=?, rating=?, message=?,
+            project_id=?, show_project_link=?, status=?, sort_order=?, photo=?
+        WHERE id=?";
+
+$st2 = $db->prepare($sql);
+
+$st2->bind_param(
+  "sssisiisisi",
+  $client_name,        // s
+  $client_title,       // s
+  $company,            // s
+  $ratingInt,          // i (nullable)
+  $message,            // s
+  $pid,                // i (nullable)
+  $show_project_link,  // i
+  $status,             // s
+  $sort_order,         // i
+  $newPhoto,           // s  ✅ THIS WAS YOUR PROBLEM
+  $id                  // i
+);
+
+$st2->execute();
+$st2->close();
 
         flash_set('success', 'Testimonial updated successfully.');
         redirect('list.php');
@@ -168,7 +181,7 @@ require_once __DIR__ . '/../includes/admin_sidebar.php';
       </div>
     <?php endif; ?>
 
-    <form method="post">
+    <form method="post" enctype="multipart/form-data">
       <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">
 
     <div class="row g-3">
@@ -202,6 +215,30 @@ require_once __DIR__ . '/../includes/admin_sidebar.php';
       <div class="col-md-3">
         <label class="form-label">Sort Order</label>
         <input type="number" class="form-control" name="sort_order" value="<?= (int)$sort_order ?>">
+      </div>
+
+      <div class="col-md-9">
+        <label class="form-label">Current Photo</label>
+        <div class="d-flex align-items-center gap-3">
+          <div style="width:64px;height:64px;border-radius:50%;overflow:hidden;background:#f2f2f2;">
+            <?php if ($photo): ?>
+              <img src="<?= BASE_URL ?>uploads/testimonials/<?= htmlspecialchars($photo) ?>" alt="photo" style="width:100%;height:100%;object-fit:cover;" onerror="console.log('Image failed to load:', this.src);">
+            <?php else: ?>
+              <div class="h-100 d-flex align-items-center justify-content-center text-muted">
+                <i class="bi bi-person"></i>
+              </div>
+            <?php endif; ?>
+          </div>
+          <div class="text-muted small">
+            Upload a new file below to replace the current one.
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">Replace Photo</label>
+        <input class="form-control" type="file" name="photo" accept="image/*">
+        <small class="text-muted">Optional: JPG, PNG, GIF, WebP</small>
       </div>
 
       <div class="col-12">
