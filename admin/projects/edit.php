@@ -45,7 +45,7 @@ $errors = [];
 $flash = null;
 
 // -------------------- Load project --------------------
-$stmt = $db->prepare("SELECT * FROM projects WHERE id = ? LIMIT 1");
+$stmt = $db->prepare("SELECT id, title, slug, short_desc, full_desc, category, project_url, cover_image, tech_stack, created_at, status, is_featured FROM projects WHERE id = ? LIMIT 1");
 $stmt->bind_param("i", $id);
 $stmt->execute();
 $project = $stmt->get_result()->fetch_assoc();
@@ -75,6 +75,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $category   = trim((string)($_POST['category'] ?? ''));
   $status     = trim((string)($_POST['status'] ?? 'draft'));
   $is_featured = !empty($_POST['is_featured']) ? 1 : 0;
+  $use_project_url = !empty($_POST['use_project_url']) ? 1 : 0;
+  $project_url = $use_project_url ? trim((string)($_POST['project_url'] ?? '')) : '';
 
   $tech_stack_input = trim((string)($_POST['tech_stack'] ?? ''));
   $tech_stack = [];
@@ -156,7 +158,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $tech_stack_json = $tech_stack ? json_encode($tech_stack, JSON_UNESCAPED_SLASHES) : null;
 
     $sql = "UPDATE projects
-            SET title=?, slug=?, short_desc=?, full_desc=?, category=?, status=?, is_featured=?, cover_image=?, tech_stack=?
+            SET title=?, slug=?, short_desc=?, full_desc=?, category=?, project_url=?, status=?, is_featured=?, cover_image=?, tech_stack=?
             WHERE id=? LIMIT 1";
 
     $stmt = $db->prepare($sql);
@@ -164,12 +166,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $errors[] = "DB error: " . $db->error;
     } else {
       $stmt->bind_param(
-        "ssssssissi",
+        "sssssssissi",
         $title,
         $slug,
         $short_desc,
         $full_desc,
         $category,
+        $project_url,
         $status,
         $is_featured,
         $cover_image,
@@ -286,6 +289,21 @@ $csrf = csrf_token();
           </div>
 
           <div class="col-12">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="use_project_url" id="use_project_url" value="1" <?= !empty($project['project_url']) ? 'checked' : '' ?> onchange="toggleProjectUrl()">
+                <label class="form-check-label" for="use_project_url">
+                  Use external URL for this project
+                </label>
+            </div>
+          </div>
+
+          <div class="col-12" id="project_url_field" style="<?= !empty($project['project_url']) ? '' : 'display: none;' ?>">
+            <label class="form-label">Project URL</label>
+            <input class="form-control" name="project_url" value="<?= h((string)($project['project_url'] ?? '')) ?>" placeholder="https://example.com/project">
+            <div class="form-text">External URL where users can view this project (e.g., GitHub, live demo, etc.)</div>
+          </div>
+
+          <div class="col-12">
             <label class="form-label">Short Description *</label>
             <input class="form-control" name="short_desc" value="<?= h((string)$project['short_desc']) ?>" required>
           </div>
@@ -338,5 +356,18 @@ $csrf = csrf_token();
 
   </div>
 </div>
+
+<script>
+function toggleProjectUrl() {
+  const checkbox = document.getElementById('use_project_url');
+  const urlField = document.getElementById('project_url_field');
+  
+  if (checkbox.checked) {
+    urlField.style.display = 'block';
+  } else {
+    urlField.style.display = 'none';
+  }
+}
+</script>
 
 <?php require_once __DIR__ . '/../includes/admin_footer.php'; ?>

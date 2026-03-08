@@ -26,6 +26,18 @@ if (!($db instanceof mysqli)) {
   exit;
 }
 
+$blogHeroCover = '';
+$blogHeroTextClass = 'text-muted';
+if (function_exists('setting_get')) {
+  $blogCover = trim((string)setting_get($db, 'blog_cover_image', ''));
+  if ($blogCover !== '') {
+    $blogHeroCover = (strpos($blogCover, 'http') === 0)
+      ? $blogCover
+      : rtrim((string)BASE_URL, '/') . '/' . ltrim($blogCover, '/');
+    $blogHeroTextClass = '';
+  }
+}
+
 $allowedCat = ($cat === 'All') ? '' : $cat;
 
 // -------------------- Helper: excerpt + reading time --------------------
@@ -193,7 +205,7 @@ $filteredCount = count($posts);
 ?>
 
 <!-- Page Hero -->
-<section class="hero">
+<section class="hero<?= $blogHeroCover !== '' ? ' hero-cover-blur hero-scroll-blur' : '' ?>"<?= $blogHeroCover !== '' ? ' style="--hero-cover-image:url(\'' . h2($blogHeroCover) . '\');"' : '' ?>>
   <div class="container py-5">
     <div class="row g-4 align-items-center">
       <div class="col-lg-8">
@@ -214,7 +226,7 @@ $filteredCount = count($posts);
         </div>
         
         <h1 class="display-6 fw-bold mb-3">Tips, guides, and updates from Alma Tech.</h1>
-        <p class="lead text-muted mb-0">
+        <p class="lead <?= $blogHeroTextClass ?> mb-0">
           Learn about websites, marketing, ICT support, and technology for business growth in Uganda.
         </p>
       </div>
@@ -265,7 +277,7 @@ $filteredCount = count($posts);
         <div class="col-lg-5">
           <div class="featured-cover">
             <?php if ($has_img): ?>
-              <img src="<?= h2(BASE_URL . ltrim($cover, '/')) ?>" alt="<?= h2((string)$featured['title']) ?>">
+              <img src="<?= h2(rtrim((string)BASE_URL, '/') . '/' . ltrim($cover, '/')) ?>" alt="<?= h2((string)$featured['title']) ?>">
             <?php else: ?>
               <div class="project-cover-fallback">
                 <i class="bi bi-image"></i>
@@ -347,7 +359,7 @@ $filteredCount = count($posts);
           <div class="blog-card h-100">
             <div class="blog-cover">
               <?php if ($has_img): ?>
-                <img src="<?= h2(BASE_URL . ltrim($cover, '/')) ?>" alt="<?= h2((string)$p['title']) ?>">
+                <img src="<?= h2(rtrim((string)BASE_URL, '/') . '/' . ltrim($cover, '/')) ?>" alt="<?= h2((string)$p['title']) ?>">
               <?php else: ?>
                 <div class="project-cover-fallback">
                   <i class="bi bi-image"></i>

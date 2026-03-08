@@ -1,0 +1,20 @@
+RewriteEngine On
+
+# Security
+Options -Indexes
+<Files ~ "^\.">
+  Require all denied
+</Files>
+
+# Keep real files/directories working
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Shop routes (within /shop)
+RewriteRule ^$ index.php [L,QSA]
+RewriteRule ^category/([a-zA-Z0-9_-]+)/?$ category.php?slug=$1 [L,QSA]
+RewriteRule ^product/([a-zA-Z0-9_-]+)/?$ product.php?slug=$1 [L,QSA]
+RewriteRule ^search/?$ search.php [L,QSA]
+RewriteRule ^suggest/?$ suggest.php [L,QSA]
+RewriteRule ^request/?$ request.php [L,QSA]

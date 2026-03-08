@@ -119,7 +119,7 @@ if (!empty($post['content'])) {
 
 $excerpt = make_excerpt($post['excerpt'] ?? '', $post['content'] ?? '');
 $read_mins = reading_mins($post['content'] ?? '');
-$cover_url = !empty($post['cover_image']) ? h(BASE_URL . '/' . ltrim($post['cover_image'], '/')) : '';
+$cover_url = !empty($post['cover_image']) ? h(rtrim((string)BASE_URL, '/') . '/' . ltrim((string)$post['cover_image'], '/')) : '';
 $category = h($post['category'] ?? 'Uncategorized');
 $date = date('F j, Y', strtotime($post['published_at'] ?? 'now'));
 ?>

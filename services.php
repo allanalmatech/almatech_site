@@ -24,6 +24,18 @@ if (!($db instanceof mysqli)) {
   exit;
 }
 
+$servicesHeroCover = '';
+$servicesHeroTextClass = 'text-muted';
+if (function_exists('setting_get')) {
+  $servicesCover = trim((string)setting_get($db, 'services_cover_image', ''));
+  if ($servicesCover !== '') {
+    $servicesHeroCover = (strpos($servicesCover, 'http') === 0)
+      ? $servicesCover
+      : rtrim((string)BASE_URL, '/') . '/' . ltrim($servicesCover, '/');
+    $servicesHeroTextClass = '';
+  }
+}
+
 /**
  * Helper: build a safe preview snippet from description
  */
@@ -74,7 +86,7 @@ if ($stmt) {
 ?>
 
 <!-- Page Hero -->
-<section class="hero">
+<section class="hero<?= $servicesHeroCover !== '' ? ' hero-cover-blur hero-scroll-blur' : '' ?>"<?= $servicesHeroCover !== '' ? ' style="--hero-cover-image:url(\'' . h($servicesHeroCover) . '\');"' : '' ?>>
   <div class="container py-5">
     <div class="row g-4 align-items-center">
       <div class="col-lg-7">
@@ -82,7 +94,7 @@ if ($stmt) {
           <i class="bi bi-grid-1x2-fill me-1"></i> Services
         </div>
         <h1 class="display-6 fw-bold mb-3">Everything you need for business technology & growth.</h1>
-        <p class="lead text-muted mb-4">
+        <p class="lead <?= $servicesHeroTextClass ?> mb-4">
           We deliver ICT solutions, web systems, branding, marketing, and support — with a focus on quality, speed, and results.
         </p>
 
@@ -147,7 +159,7 @@ if ($stmt) {
           // If icon is an uploaded file, show it as image
           $iconFilePath = __DIR__ . '/uploads/services/' . $icon;
           $hasImage = ($icon !== '' && is_file($iconFilePath));
-          $iconUrl = BASE_URL . 'uploads/services/' . rawurlencode($icon);
+          $iconUrl = rtrim((string)BASE_URL, '/') . '/uploads/services/' . rawurlencode($icon);
 
           $summary = $short !== '' ? $short : excerpt($desc, 140);
         ?>

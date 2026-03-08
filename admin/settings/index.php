@@ -40,6 +40,8 @@ $email          = setting_get($db, 'contact_email', '');
 $phone          = setting_get($db, 'contact_phone', '');
 $whatsapp       = setting_get($db, 'contact_whatsapp', '');
 $map_embed      = setting_get($db, 'contact_map_embed', '');
+$recaptcha_site_key = setting_get($db, 'recaptcha_site_key', '');
+$recaptcha_secret_key = setting_get($db, 'recaptcha_secret_key', '');
 
 $brand_logo     = setting_get($db, 'brand_logo', '');
 $favicon        = setting_get($db, 'brand_favicon', '');
@@ -48,6 +50,12 @@ $secondary_color= setting_get($db, 'brand_secondary_color', '#0b1220');
 $accent_color   = setting_get($db, 'brand_accent_color', '#f3f4f6');
 
 $footer_note    = setting_get($db, 'footer_note', '');
+
+$about_cover_image    = setting_get($db, 'about_cover_image', '');
+$services_cover_image = setting_get($db, 'services_cover_image', '');
+$projects_cover_image = setting_get($db, 'projects_cover_image', '');
+$blog_cover_image     = setting_get($db, 'blog_cover_image', '');
+$contact_cover_image  = setting_get($db, 'contact_cover_image', '');
 
 $under_construction = setting_get($db, 'under_construction', '0');
 
@@ -74,6 +82,7 @@ $visible_links = setting_get_json($db, 'visible_links', [
   'about' => true,
   'services' => true,
   'projects' => true,
+  'shop' => false,
   'blog' => true,
   'team' => true,
   'testimonials' => true,
@@ -96,6 +105,12 @@ $home = setting_get_json($db, 'home_settings', [
   'hero_cta_link' => 'contact.php',
   'slider_enabled' => true
 ]);
+
+// Analytics settings
+$ga4_property_id      = setting_get($db, 'ga4_property_id', '');
+$ga4_service_json_path = setting_get($db, 'ga4_service_json_path', '');
+$ga4_service_json     = setting_get($db, 'ga4_service_json', '');
+$looker_embed_url     = setting_get($db, 'looker_embed_url', '');
 
 $flash = $_GET['saved'] ?? '';
 ?>
@@ -129,7 +144,13 @@ $flash = $_GET['saved'] ?? '';
             <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-links" type="button" style="white-space: nowrap;">Visible Links</button></li>
             <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-home" type="button" style="white-space: nowrap;">Home Page</button></li>
             <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-about" type="button" style="white-space: nowrap;">About Page</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-page-covers" type="button" style="white-space: nowrap;">Page Covers</button></li>
             <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-footer" type="button" style="white-space: nowrap;">Footer</button></li>
+            <li class="nav-item">
+              <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-analytics" type="button" style="white-space: nowrap;">
+                Analytics
+              </button>
+            </li>
             <li class="nav-item">
               <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-maint" type="button" style="white-space: nowrap;">
                 Under Construction
@@ -206,6 +227,15 @@ $flash = $_GET['saved'] ?? '';
           <div class="col-12">
             <label class="form-label">Google Map Embed URL (iframe src)</label>
             <input class="form-control" name="contact_map_embed" value="<?= h($map_embed) ?>">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Google reCAPTCHA Site Key</label>
+            <input class="form-control" name="recaptcha_site_key" value="<?= h($recaptcha_site_key) ?>" placeholder="6Lc...">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Google reCAPTCHA Secret Key</label>
+            <input class="form-control" name="recaptcha_secret_key" value="<?= h($recaptcha_secret_key) ?>" placeholder="6Lc...">
+            <div class="form-text">Used on public forms to block automated spam.</div>
           </div>
         </div>
       </div>
@@ -492,6 +522,7 @@ $flash = $_GET['saved'] ?? '';
           'about' => 'About',
           'services' => 'Services',
           'projects' => 'Projects',
+          'shop' => 'Shop Button',
           'blog' => 'Blog',
           'team' => 'Team',
           'testimonials' => 'Testimonials',
@@ -527,7 +558,9 @@ $flash = $_GET['saved'] ?? '';
         }
 
         // Clean order: remove slugs that no longer exist
-        $nav_order = array_values(array_filter($nav_order, fn($s) => isset($nav_items[(string)$s])));
+        $nav_order = array_values(array_filter($nav_order, function ($s) use ($nav_items) {
+          return isset($nav_items[(string)$s]);
+        }));
         ?>
 
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
@@ -834,6 +867,80 @@ if ($tRes) $tpls = $tRes->fetch_all(MYSQLI_ASSOC);
 
 
       <!-- Footer -->
+      <div class="tab-pane fade" id="tab-page-covers">
+        <div class="row g-3">
+          <div class="col-12">
+            <h6 class="mb-1">Hero Cover Images</h6>
+            <div class="text-muted small">Recommended dimensions: <strong>1600 x 560 px</strong> (JPG, PNG, WEBP up to 4MB).</div>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label">About Page Cover</label>
+            <input class="form-control" type="file" name="about_cover_image_file" accept="image/jpeg,image/png,image/webp">
+            <?php if (!empty($about_cover_image)): ?>
+              <?php $about_cover_preview = (strpos($about_cover_image, 'http') === 0) ? $about_cover_image : (rtrim((string)BASE_URL, '/') . '/' . ltrim((string)$about_cover_image, '/')); ?>
+              <div class="mt-2"><img src="<?= h($about_cover_preview) ?>" alt="About cover" style="max-width: 280px; width: 100%; border-radius: 10px; border: 1px solid #e2e8f0;"></div>
+              <div class="form-check mt-2">
+                <input class="form-check-input" type="checkbox" name="remove_about_cover_image" id="removeAboutCover">
+                <label class="form-check-label" for="removeAboutCover">Remove current About cover</label>
+              </div>
+            <?php endif; ?>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label">Services Page Cover</label>
+            <input class="form-control" type="file" name="services_cover_image_file" accept="image/jpeg,image/png,image/webp">
+            <?php if (!empty($services_cover_image)): ?>
+              <?php $services_cover_preview = (strpos($services_cover_image, 'http') === 0) ? $services_cover_image : (rtrim((string)BASE_URL, '/') . '/' . ltrim((string)$services_cover_image, '/')); ?>
+              <div class="mt-2"><img src="<?= h($services_cover_preview) ?>" alt="Services cover" style="max-width: 280px; width: 100%; border-radius: 10px; border: 1px solid #e2e8f0;"></div>
+              <div class="form-check mt-2">
+                <input class="form-check-input" type="checkbox" name="remove_services_cover_image" id="removeServicesCover">
+                <label class="form-check-label" for="removeServicesCover">Remove current Services cover</label>
+              </div>
+            <?php endif; ?>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label">Projects Page Cover</label>
+            <input class="form-control" type="file" name="projects_cover_image_file" accept="image/jpeg,image/png,image/webp">
+            <?php if (!empty($projects_cover_image)): ?>
+              <?php $projects_cover_preview = (strpos($projects_cover_image, 'http') === 0) ? $projects_cover_image : (rtrim((string)BASE_URL, '/') . '/' . ltrim((string)$projects_cover_image, '/')); ?>
+              <div class="mt-2"><img src="<?= h($projects_cover_preview) ?>" alt="Projects cover" style="max-width: 280px; width: 100%; border-radius: 10px; border: 1px solid #e2e8f0;"></div>
+              <div class="form-check mt-2">
+                <input class="form-check-input" type="checkbox" name="remove_projects_cover_image" id="removeProjectsCover">
+                <label class="form-check-label" for="removeProjectsCover">Remove current Projects cover</label>
+              </div>
+            <?php endif; ?>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label">Blog Page Cover</label>
+            <input class="form-control" type="file" name="blog_cover_image_file" accept="image/jpeg,image/png,image/webp">
+            <?php if (!empty($blog_cover_image)): ?>
+              <?php $blog_cover_preview = (strpos($blog_cover_image, 'http') === 0) ? $blog_cover_image : (rtrim((string)BASE_URL, '/') . '/' . ltrim((string)$blog_cover_image, '/')); ?>
+              <div class="mt-2"><img src="<?= h($blog_cover_preview) ?>" alt="Blog cover" style="max-width: 280px; width: 100%; border-radius: 10px; border: 1px solid #e2e8f0;"></div>
+              <div class="form-check mt-2">
+                <input class="form-check-input" type="checkbox" name="remove_blog_cover_image" id="removeBlogCover">
+                <label class="form-check-label" for="removeBlogCover">Remove current Blog cover</label>
+              </div>
+            <?php endif; ?>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label">Contact Page Cover</label>
+            <input class="form-control" type="file" name="contact_cover_image_file" accept="image/jpeg,image/png,image/webp">
+            <?php if (!empty($contact_cover_image)): ?>
+              <?php $contact_cover_preview = (strpos($contact_cover_image, 'http') === 0) ? $contact_cover_image : (rtrim((string)BASE_URL, '/') . '/' . ltrim((string)$contact_cover_image, '/')); ?>
+              <div class="mt-2"><img src="<?= h($contact_cover_preview) ?>" alt="Contact cover" style="max-width: 280px; width: 100%; border-radius: 10px; border: 1px solid #e2e8f0;"></div>
+              <div class="form-check mt-2">
+                <input class="form-check-input" type="checkbox" name="remove_contact_cover_image" id="removeContactCover">
+                <label class="form-check-label" for="removeContactCover">Remove current Contact cover</label>
+              </div>
+            <?php endif; ?>
+          </div>
+        </div>
+      </div>
+
       <div class="tab-pane fade" id="tab-footer">
         <label class="form-label">Footer Note</label>
         <textarea class="form-control" name="footer_note" rows="3"><?= h($footer_note) ?></textarea>

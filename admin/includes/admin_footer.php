@@ -41,6 +41,23 @@ declare(strict_types=1);
       // do nothing here; "hidden" will reset
     });
   }
+
+  const shopSubmenu = document.getElementById('shopSubmenu');
+  const shopToggle = document.querySelector('[data-bs-target="#shopSubmenu"]');
+
+  if (shopSubmenu && shopToggle) {
+    const shopIcon = shopToggle.querySelector('.shop-toggle-icon');
+
+    function setShopIcon(isOpen) {
+      if (!shopIcon) return;
+      shopIcon.classList.toggle('bi-chevron-up', isOpen);
+      shopIcon.classList.toggle('bi-chevron-down', !isOpen);
+    }
+
+    setShopIcon(shopSubmenu.classList.contains('show'));
+    shopSubmenu.addEventListener('show.bs.collapse', function () { setShopIcon(true); });
+    shopSubmenu.addEventListener('hide.bs.collapse', function () { setShopIcon(false); });
+  }
 })();
 </script>
 

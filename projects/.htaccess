@@ -1,0 +1,3 @@
+# Deny directory browsing & direct folder access
+Options -Indexes
+

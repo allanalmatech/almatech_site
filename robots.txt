@@ -1,0 +1,19 @@
+User-agent: *
+Allow: /
+
+# Block sensitive areas
+Disallow: /admin/
+Disallow: /api/
+Disallow: /includes/
+Disallow: /uploads/private/
+Disallow: /config.php
+Disallow: /vendor/
+Disallow: /projects/
+Disallow: /uacu/
+
+# Allow public assets
+Allow: /assets/
+Allow: /uploads/
+
+# Sitemap
+Sitemap: https://almatechconsults.com/sitemap.xml

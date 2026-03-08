@@ -61,6 +61,8 @@ setting_set($db, 'contact_email', trim((string)($_POST['contact_email'] ?? '')))
 setting_set($db, 'contact_phone', trim((string)($_POST['contact_phone'] ?? '')));
 setting_set($db, 'contact_whatsapp', trim((string)($_POST['contact_whatsapp'] ?? '')));
 setting_set($db, 'contact_map_embed', trim((string)($_POST['contact_map_embed'] ?? '')));
+setting_set($db, 'recaptcha_site_key', trim((string)($_POST['recaptcha_site_key'] ?? '')));
+setting_set($db, 'recaptcha_secret_key', trim((string)($_POST['recaptcha_secret_key'] ?? '')));
 
 // Handle file uploads for brand assets
 $brand_logo = trim((string)($_POST['brand_logo'] ?? ''));
@@ -115,6 +117,70 @@ setting_set($db, 'brand_secondary_color', trim((string)($_POST['brand_secondary_
 setting_set($db, 'brand_accent_color', trim((string)($_POST['brand_accent_color'] ?? '#f3f4f6')));
 
 setting_set($db, 'footer_note', trim((string)($_POST['footer_note'] ?? '')));
+
+/**
+ * -------------------------
+ * PAGE COVER IMAGES
+ * -------------------------
+ */
+function save_page_cover_image(mysqli $db, string $settingKey, string $fileKey, string $removeKey): void {
+  $current = trim((string)setting_get($db, $settingKey, ''));
+  $remove = !empty($_POST[$removeKey]);
+  $next = $remove ? '' : $current;
+
+  if (isset($_FILES[$fileKey]) && is_array($_FILES[$fileKey])) {
+    $err = (int)($_FILES[$fileKey]['error'] ?? UPLOAD_ERR_NO_FILE);
+    if ($err === UPLOAD_ERR_OK && is_uploaded_file((string)$_FILES[$fileKey]['tmp_name'])) {
+      $tmp = (string)$_FILES[$fileKey]['tmp_name'];
+      $size = (int)($_FILES[$fileKey]['size'] ?? 0);
+      if ($size <= 4 * 1024 * 1024) {
+        $mime = '';
+        if (function_exists('finfo_open')) {
+          $finfo = finfo_open(FILEINFO_MIME_TYPE);
+          $mime = $finfo ? (string)finfo_file($finfo, $tmp) : '';
+          if ($finfo) finfo_close($finfo);
+        }
+
+        $allowed = [
+          'image/jpeg' => 'jpg',
+          'image/jpg'  => 'jpg',
+          'image/pjpeg'=> 'jpg',
+          'image/png'  => 'png',
+          'image/webp' => 'webp',
+        ];
+
+        if (isset($allowed[$mime])) {
+          $uploadDir = __DIR__ . '/../../uploads/page_covers/';
+          $uploadDir = str_replace('/', DIRECTORY_SEPARATOR, $uploadDir);
+          if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0775, true);
+          }
+
+          $name = $settingKey . '_' . date('Ymd_His') . '_' . bin2hex(random_bytes(4)) . '.' . $allowed[$mime];
+          $dest = rtrim($uploadDir, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $name;
+          if (move_uploaded_file($tmp, $dest)) {
+            $next = 'uploads/page_covers/' . $name;
+          }
+        }
+      }
+    }
+  }
+
+  if ($current !== '' && $current !== $next && strpos($current, 'uploads/page_covers/') === 0) {
+    $old = __DIR__ . '/../../' . str_replace('/', DIRECTORY_SEPARATOR, $current);
+    if (is_file($old)) {
+      @unlink($old);
+    }
+  }
+
+  setting_set($db, $settingKey, $next);
+}
+
+save_page_cover_image($db, 'about_cover_image', 'about_cover_image_file', 'remove_about_cover_image');
+save_page_cover_image($db, 'services_cover_image', 'services_cover_image_file', 'remove_services_cover_image');
+save_page_cover_image($db, 'projects_cover_image', 'projects_cover_image_file', 'remove_projects_cover_image');
+save_page_cover_image($db, 'blog_cover_image', 'blog_cover_image_file', 'remove_blog_cover_image');
+save_page_cover_image($db, 'contact_cover_image', 'contact_cover_image_file', 'remove_contact_cover_image');
 
 /**
  * -------------------------

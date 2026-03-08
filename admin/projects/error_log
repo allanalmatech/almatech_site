@@ -1,0 +1,6 @@
+[05-Feb-2026 19:10:31 UTC] PHP Warning:  mysqli_stmt::bind_param(): Number of elements in type definition string doesn't match number of bind variables in /home3/almatech/public_html/admin/projects/edit.php on line 169
+[05-Feb-2026 19:13:48 UTC] PHP Warning:  mysqli_stmt::bind_param(): Number of elements in type definition string doesn't match number of bind variables in /home3/almatech/public_html/admin/projects/edit.php on line 169
+[11-Feb-2026 12:38:53 UTC] PHP Warning:  mysqli_stmt::bind_param(): Number of variables doesn't match number of parameters in prepared statement in /home3/almatech/public_html/admin/projects/add.php on line 155
+[11-Feb-2026 12:39:07 UTC] PHP Warning:  mysqli_stmt::bind_param(): Number of variables doesn't match number of parameters in prepared statement in /home3/almatech/public_html/admin/projects/add.php on line 155
+[11-Feb-2026 12:39:18 UTC] PHP Warning:  mysqli_stmt::bind_param(): Number of variables doesn't match number of parameters in prepared statement in /home3/almatech/public_html/admin/projects/add.php on line 155
+[11-Feb-2026 12:39:49 UTC] PHP Warning:  mysqli_stmt::bind_param(): Number of variables doesn't match number of parameters in prepared statement in /home3/almatech/public_html/admin/projects/add.php on line 155

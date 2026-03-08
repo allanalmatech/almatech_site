@@ -9,12 +9,6 @@ require_admin_login();
 require_once __DIR__ . '/../../includes/db.php';
 csrf_init();
 
-function slugify(string $text): string {
-  $text = strtolower(trim($text));
-  $text = preg_replace('/[^a-z0-9]+/', '-', $text);
-  return trim($text, '-');
-}
-
 $id = (int)($_GET['id'] ?? 0);
 if ($id <= 0) {
   flash_set('danger', 'Invalid service selected.');

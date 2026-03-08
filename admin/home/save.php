@@ -148,7 +148,9 @@ foreach ($slides as $index => $row) {
   ];
 }
 
-usort($cleanSlides, fn($a,$b) => ($a['sort_order'] <=> $b['sort_order']));
+usort($cleanSlides, function ($a, $b) {
+  return ($a['sort_order'] <=> $b['sort_order']);
+});
 $slider['slides'] = $cleanSlides;
 
 // ---------------- QUICK REQUEST ----------------

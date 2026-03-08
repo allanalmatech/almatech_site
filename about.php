@@ -41,6 +41,18 @@ if (!$db_ok) {
   exit;
 }
 
+$aboutHeroCover = '';
+$aboutHeroTextClass = 'text-muted';
+if (function_exists('setting_get')) {
+  $aboutCover = trim((string)setting_get($db, 'about_cover_image', ''));
+  if ($aboutCover !== '') {
+    $aboutHeroCover = (strpos($aboutCover, 'http') === 0)
+      ? $aboutCover
+      : rtrim((string)BASE_URL, '/') . '/' . ltrim($aboutCover, '/');
+    $aboutHeroTextClass = '';
+  }
+}
+
 // -------------------------------------
 // FETCH ABOUT SETTINGS (REQUIRED)
 // -------------------------------------
@@ -144,7 +156,7 @@ if ($stmt) {
       call_user_func_array([$stmt, 'bind_result'], $bind);
       while ($stmt->fetch()) {
         $testimonials[] = $row;
-        $row = array_map(fn($v) => $v, $row); // detach
+        $row = array_map(function ($v) { return $v; }, $row); // detach
       }
     }
   }
@@ -154,7 +166,7 @@ if ($stmt) {
 ?>
 
 <!-- ================= HERO ================= -->
-<section class="hero">
+<section class="hero<?= $aboutHeroCover !== '' ? ' hero-cover-blur hero-scroll-blur' : '' ?>"<?= $aboutHeroCover !== '' ? ' style="--hero-cover-image:url(\'' . h($aboutHeroCover) . '\');"' : '' ?>>
   <div class="container py-5">
     <div class="row g-4 align-items-center">
       <div class="col-lg-7">
@@ -166,7 +178,7 @@ if ($stmt) {
           <?= h($about['hero_subtitle'] ?? '') ?>
         </h1>
         <?php if (!empty($about['story'])): ?>
-          <p class="lead text-muted mb-0">
+          <p class="lead <?= $aboutHeroTextClass ?> mb-0">
             <?= nl2br(h((string)$about['story'])) ?>
           </p>
         <?php endif; ?>
@@ -279,7 +291,7 @@ if ($stmt) {
           <?php foreach ($team as $m): ?>
             <?php
               $img = !empty($m['photo'])
-                ? (BASE_URL . "uploads/team/" . rawurlencode((string)$m['photo']))
+                ? (rtrim((string)BASE_URL, '/') . "/uploads/team/" . rawurlencode((string)$m['photo']))
                 : '';
             ?>
             <a class="text-decoration-none" href="team.php?slug=<?= h((string)$m['slug']) ?>" style="width:320px;">
@@ -341,7 +353,7 @@ if ($stmt) {
               <div class="d-flex gap-3 align-items-center mb-2">
                 <div style="width:52px;height:52px;border-radius:16px;overflow:hidden;background:#f2f2f2;">
                   <?php if (!empty($t['photo'])): ?>
-                    <img src="<?= BASE_URL ?>uploads/testimonials/<?= h((string)$t['photo']) ?>"
+                    <img src="<?= rtrim((string)BASE_URL, '/') ?>/uploads/testimonials/<?= h((string)$t['photo']) ?>"
                          alt="<?= h((string)($t['client_name'] ?? ($t['name'] ?? 'Client'))) ?>"
                          style="width:100%;height:100%;object-fit:cover;">
                   <?php else: ?>
@@ -364,6 +376,17 @@ if ($stmt) {
                   </div>
                 </div>
               </div>
+
+              <?php if (!empty($t['rating'])): ?>
+                <div class="mb-2">
+                  <?php
+                    $rating = (int)$t['rating'];
+                    for ($i = 1; $i <= 5; $i++):
+                  ?>
+                    <i class="bi bi-star-fill text-orange<?= $i <= $rating ? '' : '-50' ?>" style="font-size:14px;"></i>
+                  <?php endfor; ?>
+                </div>
+              <?php endif; ?>
 
               <div class="text-muted">
                 <?= nl2br(h((string)($t['message'] ?? ($t['content'] ?? '')))) ?>

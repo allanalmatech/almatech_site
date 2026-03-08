@@ -327,7 +327,7 @@ $ok = false;
                       'caption_align' => 'left',
                     ];
                     $imgVal = (string)($s['image'] ?? '');
-                    $imgPreview = $imgVal ? (strpos($imgVal,'uploads/')===0 ? (BASE_URL.$imgVal) : (BASE_URL.'uploads/slider/'.ltrim($imgVal,'/'))) : '';
+                    $imgPreview = $imgVal ? (strpos($imgVal,'uploads/')===0 ? (rtrim((string)BASE_URL, '/').'/'.$imgVal) : (rtrim((string)BASE_URL, '/').'/uploads/slider/'.ltrim($imgVal,'/'))) : '';
                   ?>
                   <div class="slide-card border rounded p-2 mb-2" data-slide-card>
                     <div class="d-flex align-items-center gap-2">
@@ -834,7 +834,7 @@ $ok = false;
           container.innerHTML = data.images.map(img => `
             <div class="col-md-3 col-sm-4 col-6">
               <div class="gallery-image-item border rounded p-2 cursor-pointer" data-image="${img.name}">
-                <img src="<?= h(BASE_URL) ?>uploads/slider/${img.name}" class="img-fluid" alt="${img.name}">
+                <img src="<?= h(rtrim((string)BASE_URL, '/')) ?>/uploads/slider/${img.name}" class="img-fluid" alt="${img.name}">
                 <div class="small text-muted mt-1 text-truncate">${img.name}</div>
               </div>
             </div>
@@ -869,7 +869,7 @@ $ok = false;
       // Update preview
       const preview = currentCard.querySelector("img[alt='Preview']");
       if(preview) {
-        preview.src = '<?= BASE_URL ?>uploads/slider/' + imageName;
+        preview.src = '<?= rtrim((string)BASE_URL, '/') ?>/uploads/slider/' + imageName;
       }
     }
     
