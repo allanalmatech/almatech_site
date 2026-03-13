@@ -18,7 +18,8 @@ $host = $_SERVER['HTTP_HOST'] ?? 'www.almatechconsults.com';
 $ORIGIN = $scheme . '://' . $host;
 $recaptchaSiteKey = trim((string)setting('recaptcha_site_key', ''));
 $recaptchaSecretKey = trim((string)setting('recaptcha_secret_key', ''));
-$useRecaptcha = ($recaptchaSiteKey !== '' && $recaptchaSecretKey !== '');
+$mathFallbackEnabled = setting('recaptcha_fallback_math_enabled', '0') === '1';
+$useRecaptcha = ($recaptchaSiteKey !== '');
 
 db()->exec("CREATE TABLE IF NOT EXISTS gadget_requests (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -50,8 +51,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($useRecaptcha) {
         $captchaToken = (string)($_POST['recaptcha_token'] ?? ($_POST['g-recaptcha-response'] ?? ''));
         $remoteIp = (string)($_SERVER['REMOTE_ADDR'] ?? '');
-        if (!recaptcha_verify_token($recaptchaSecretKey, $captchaToken, $remoteIp, 'shop_request_submit')) {
-            $errors[] = 'reCAPTCHA check failed. Please try again.';
+        $recaptchaOk = recaptcha_verify_token($recaptchaSecretKey, $captchaToken, $remoteIp, 'shop_request_submit', 0.3);
+        if (!$recaptchaOk) {
+            if ($mathFallbackEnabled) {
+                $captchaFallbackOk = captcha_validate_submission('shop_gadget_request', (string)($_POST['captcha_token'] ?? ''), (string)($_POST['captcha_answer'] ?? ''));
+                if (!$captchaFallbackOk) {
+                    $errors[] = 'Security verification failed. Please solve the captcha and try again.';
+                }
+            } else {
+                $errors[] = 'reCAPTCHA check failed. Please refresh and try again.';
+            }
         }
     } else {
         if (!captcha_validate_submission('shop_gadget_request', (string)($_POST['captcha_token'] ?? ''), (string)($_POST['captcha_answer'] ?? ''))) {
@@ -177,7 +186,7 @@ require_once __DIR__ . '/../includes/header.php';
     <div class="row g-4">
       <div class="col-lg-7">
         <div class="hero-card p-4 p-lg-5">
-          <form method="post" enctype="multipart/form-data" class="row g-3" data-recaptcha-enterprise="1" data-recaptcha-action="shop_request_submit">
+          <form method="post" enctype="multipart/form-data" class="row g-3" data-recaptcha-v3="1" data-recaptcha-action="shop_request_submit">
             <?= csrf_field() ?>
             <input type="hidden" name="recaptcha_token" value="">
 
@@ -217,6 +226,9 @@ require_once __DIR__ . '/../includes/header.php';
                 <label class="form-label">Human Verification *</label>
                 <div class="small text-muted">Protected by Google reCAPTCHA.</div>
               </div>
+              <?php if ($mathFallbackEnabled): ?>
+                <?= captcha_render('shop_gadget_request', 'Fallback Captcha (if reCAPTCHA fails)', false) ?>
+              <?php endif; ?>
             <?php else: ?>
               <?= captcha_render('shop_gadget_request', 'Human Verification') ?>
             <?php endif; ?>
@@ -249,10 +261,12 @@ require_once __DIR__ . '/../includes/header.php';
 <?php if ($useRecaptcha): ?>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-  var form = document.querySelector('form[data-recaptcha-enterprise]');
-  if (!form || !window.RECAPTCHA_SITE_KEY || !window.grecaptcha || !window.grecaptcha.enterprise) {
+  var form = document.querySelector('form[data-recaptcha-v3]');
+if (!form || !window.RECAPTCHA_SITE_KEY) {
     return;
   }
+
+  var allowMathFallback = <?= $mathFallbackEnabled ? 'true' : 'false' ?>;
 
   form.addEventListener('submit', function (event) {
     if (form.dataset.recaptchaDone === '1') {
@@ -263,17 +277,43 @@ document.addEventListener('DOMContentLoaded', function () {
     event.preventDefault();
     var tokenInput = form.querySelector('input[name="recaptcha_token"]');
     var action = form.getAttribute('data-recaptcha-action') || 'submit';
+    var fallbackInput = form.querySelector('input[name="captcha_answer"]');
 
-    window.grecaptcha.enterprise.ready(async function () {
+    if (!window.grecaptcha || typeof window.grecaptcha.execute !== 'function') {
+      if (allowMathFallback && fallbackInput && String(fallbackInput.value || '').trim() !== '') {
+        if (tokenInput) {
+          tokenInput.value = '';
+        }
+        form.dataset.recaptchaDone = '1';
+        form.submit();
+        return;
+      }
+      alert(allowMathFallback ? 'reCAPTCHA is still loading. Please wait a moment or solve fallback captcha, then submit again.' : 'reCAPTCHA is still loading. Please wait a moment and submit again.');
+      return;
+    }
+
+    window.grecaptcha.ready(async function () {
       try {
-        var token = await window.grecaptcha.enterprise.execute(window.RECAPTCHA_SITE_KEY, { action: action });
+        var token = await window.grecaptcha.execute(window.RECAPTCHA_SITE_KEY, { action: action });
         if (tokenInput) {
           tokenInput.value = token;
         }
         form.dataset.recaptchaDone = '1';
         form.submit();
       } catch (error) {
-        alert('reCAPTCHA failed to load. Please refresh and try again.');
+        if (tokenInput) {
+          tokenInput.value = '';
+        }
+        if (allowMathFallback && fallbackInput && String(fallbackInput.value || '').trim() === '') {
+          alert('reCAPTCHA is unavailable. Please solve the fallback captcha field, then submit again.');
+          return;
+        }
+        if (!allowMathFallback) {
+          alert('reCAPTCHA check failed. Please refresh and try again.');
+          return;
+        }
+        form.dataset.recaptchaDone = '1';
+        form.submit();
       }
     });
   });
@@ -287,7 +327,11 @@ document.addEventListener('DOMContentLoaded', function () {
   var url = <?= json_encode($whatsAppRedirectUrl) ?>;
   var opened = window.open(url, '_blank', 'noopener');
   if (!opened) {
-    window.location.href = url;
+    alert('Popup blocked. Please allow popups and click the link below.');
+    var container = document.createElement('div');
+    container.className = 'alert alert-info mt-3';
+    container.innerHTML = 'Open WhatsApp: <a href="' + url + '" target="_blank" rel="noopener">Click here</a>';
+    document.body.prepend(container);
   }
 })();
 </script>

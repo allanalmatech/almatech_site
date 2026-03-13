@@ -70,7 +70,11 @@ if (!function_exists('recaptcha_verify_token')) {
   function recaptcha_verify_token(string $secretKey, string $token, ?string $remoteIp = null, string $expectedAction = '', float $minScore = 0.3): bool {
     $secretKey = trim($secretKey);
     $token = trim($token);
-    if ($secretKey === '' || $token === '') {
+    if ($token === '') {
+      return false;
+    }
+
+    if ($secretKey === '') {
       return false;
     }
 
@@ -83,7 +87,7 @@ if (!function_exists('recaptcha_verify_token')) {
     $responseBody = '';
 
     if (function_exists('curl_init')) {
-      $ch = curl_init('https://www.google.com/recaptcha/enterprise/siteverify');
+      $ch = curl_init('https://www.google.com/recaptcha/api/siteverify');
       if ($ch !== false) {
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
@@ -92,19 +96,6 @@ if (!function_exists('recaptcha_verify_token')) {
         $responseBody = (string)curl_exec($ch);
         curl_close($ch);
       }
-    }
-
-    if ($responseBody === '') {
-      $context = stream_context_create([
-        'http' => [
-          'method' => 'POST',
-          'header' => "Content-Type: application/x-www-form-urlencoded\r\n",
-          'content' => $payload,
-          'timeout' => 12,
-        ],
-      ]);
-      $fallback = @file_get_contents('https://www.google.com/recaptcha/enterprise/siteverify', false, $context);
-      $responseBody = $fallback !== false ? (string)$fallback : '';
     }
 
     if ($responseBody === '') {
@@ -131,7 +122,7 @@ if (!function_exists('recaptcha_verify_token')) {
 
     if ($expectedAction !== '') {
       $actualAction = trim((string)($decoded['action'] ?? ''));
-      if ($actualAction === '' || !hash_equals($expectedAction, $actualAction)) {
+      if ($actualAction !== '' && !hash_equals($expectedAction, $actualAction)) {
         return false;
       }
     }
@@ -140,6 +131,8 @@ if (!function_exists('recaptcha_verify_token')) {
     return $score >= $minScore;
   }
 }
+
+
 
 if (!function_exists('captcha_create')) {
   function captcha_create(string $formKey): array {
@@ -177,12 +170,13 @@ if (!function_exists('captcha_create')) {
 }
 
 if (!function_exists('captcha_render')) {
-  function captcha_render(string $formKey, string $label = 'Captcha'): string {
+  function captcha_render(string $formKey, string $label = 'Captcha', bool $required = true): string {
     $captcha = captcha_create($formKey);
+    $requiredAttr = $required ? ' required' : '';
     return '<div class="col-md-6">'
       . '<label class="form-label">' . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . ' *</label>'
       . '<input type="hidden" name="captcha_token" value="' . htmlspecialchars((string)$captcha['token'], ENT_QUOTES, 'UTF-8') . '">'
-      . '<input class="form-control" name="captcha_answer" placeholder="Solve: ' . htmlspecialchars((string)$captcha['question'], ENT_QUOTES, 'UTF-8') . '" required>'
+      . '<input class="form-control" name="captcha_answer" placeholder="Solve: ' . htmlspecialchars((string)$captcha['question'], ENT_QUOTES, 'UTF-8') . '"' . $requiredAttr . '>'
       . '</div>';
   }
 }

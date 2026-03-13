@@ -38,5 +38,5 @@ if ($secret === '' || $token === '') {
 }
 
 $action = trim((string)($_POST['action'] ?? 'quick_request'));
-$ok = recaptcha_verify_token($secret, $token, $ip, $action);
+$ok = recaptcha_verify_token($secret, $token, $ip, $action, 0.3);
 echo json_encode(['success' => $ok]);

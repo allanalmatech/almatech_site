@@ -52,6 +52,10 @@ CREATE TABLE IF NOT EXISTS `products` (
   `status` tinyint(1) NOT NULL DEFAULT 1,
   `featured` tinyint(1) NOT NULL DEFAULT 0,
   `main_image` varchar(255) NOT NULL,
+  `video_url` varchar(500) DEFAULT NULL,
+  `rating_avg` decimal(3,2) NOT NULL DEFAULT 0.00,
+  `rating_count` int(10) UNSIGNED NOT NULL DEFAULT 0,
+  `views_count` int(10) UNSIGNED NOT NULL DEFAULT 0,
   `created_at` datetime NOT NULL DEFAULT current_timestamp(),
   `updated_at` datetime DEFAULT NULL ON UPDATE current_timestamp(),
   PRIMARY KEY (`id`),
@@ -73,6 +77,30 @@ CREATE TABLE IF NOT EXISTS `product_images` (
   CONSTRAINT `fk_product_images_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS `product_ratings` (
+  `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+  `product_id` int(10) UNSIGNED NOT NULL,
+  `ip_address` varchar(64) NOT NULL,
+  `device_token` varchar(80) NOT NULL,
+  `rating` tinyint(3) UNSIGNED NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uniq_product_ip_device` (`product_id`,`ip_address`,`device_token`),
+  KEY `idx_product_ratings_product` (`product_id`),
+  CONSTRAINT `fk_product_ratings_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `product_views` (
+  `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+  `product_id` int(10) UNSIGNED NOT NULL,
+  `ip_address` varchar(64) NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uniq_product_ip` (`product_id`,`ip_address`),
+  KEY `idx_product_views_product` (`product_id`),
+  CONSTRAINT `fk_product_views_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS `gadget_requests` (
   `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
   `full_name` varchar(140) NOT NULL,
@@ -88,6 +116,14 @@ CREATE TABLE IF NOT EXISTS `gadget_requests` (
   KEY `idx_gadget_requests_status` (`status`),
   KEY `idx_gadget_requests_created` (`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+ALTER TABLE `products`
+  ADD COLUMN IF NOT EXISTS `video_url` varchar(500) DEFAULT NULL AFTER `main_image`;
+
+ALTER TABLE `products`
+  ADD COLUMN IF NOT EXISTS `rating_avg` decimal(3,2) NOT NULL DEFAULT 0.00 AFTER `video_url`,
+  ADD COLUMN IF NOT EXISTS `rating_count` int(10) UNSIGNED NOT NULL DEFAULT 0 AFTER `rating_avg`,
+  ADD COLUMN IF NOT EXISTS `views_count` int(10) UNSIGNED NOT NULL DEFAULT 0 AFTER `rating_count`;
 
 -- ---------------------------------------------------------------------
 -- 2) Seed only missing rows (no updates/deletes to existing online data)

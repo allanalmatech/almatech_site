@@ -562,14 +562,14 @@ document.addEventListener('DOMContentLoaded', function() {
       }
 
       if (useRecaptcha) {
-        if (!window.grecaptcha || !window.grecaptcha.enterprise || !window.RECAPTCHA_SITE_KEY) {
+        if (!window.grecaptcha || typeof window.grecaptcha.execute !== 'function' || !window.RECAPTCHA_SITE_KEY) {
           alert('reCAPTCHA is not ready. Please refresh and try again.');
           return;
         }
 
-        window.grecaptcha.enterprise.ready(async function () {
+        window.grecaptcha.ready(async function () {
           try {
-            const token = await window.grecaptcha.enterprise.execute(window.RECAPTCHA_SITE_KEY, { action: 'quick_request' });
+            const token = await window.grecaptcha.execute(window.RECAPTCHA_SITE_KEY, { action: 'quick_request' });
             fetch(recaptchaVerifyUrl, {
               method: 'POST',
               headers: {

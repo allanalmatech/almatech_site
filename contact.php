@@ -57,6 +57,7 @@ $wa_number        = '256XXXXXXXXX'; // no '+'
 $map_embed        = ''; // Will load from database
 $recaptcha_site_key = '';
 $recaptcha_secret_key = '';
+$math_fallback_enabled = false;
 
 if ($db instanceof mysqli) {
   // Load contact-specific settings
@@ -68,6 +69,7 @@ if ($db instanceof mysqli) {
     'contact_map_embed',
     'recaptcha_site_key',
     'recaptcha_secret_key',
+    'recaptcha_fallback_math_enabled',
   ];
 
   $placeholders = implode(',', array_fill(0, count($keys), '?'));
@@ -91,10 +93,11 @@ if ($db instanceof mysqli) {
     if (isset($kv['contact_map_embed'])) $map_embed        = $kv['contact_map_embed'];
     if (isset($kv['recaptcha_site_key'])) $recaptcha_site_key = trim((string)$kv['recaptcha_site_key']);
     if (isset($kv['recaptcha_secret_key'])) $recaptcha_secret_key = trim((string)$kv['recaptcha_secret_key']);
+    $math_fallback_enabled = isset($kv['recaptcha_fallback_math_enabled']) && (string)$kv['recaptcha_fallback_math_enabled'] === '1';
   }
 }
 
-$useRecaptcha = ($recaptcha_site_key !== '' && $recaptcha_secret_key !== '');
+$useRecaptcha = ($recaptcha_site_key !== '');
 
 // -------------------- Form values --------------------
 $errors = [];
@@ -130,8 +133,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   if ($useRecaptcha) {
     $captchaToken = (string)($_POST['recaptcha_token'] ?? ($_POST['g-recaptcha-response'] ?? ''));
     $remoteIp = (string)($_SERVER['REMOTE_ADDR'] ?? '');
-    if (!recaptcha_verify_token($recaptcha_secret_key, $captchaToken, $remoteIp, 'contact_submit')) {
-      $errors[] = "reCAPTCHA check failed. Please try again.";
+    $recaptchaOk = recaptcha_verify_token($recaptcha_secret_key, $captchaToken, $remoteIp, 'contact_submit', 0.3);
+    if (!$recaptchaOk) {
+      if ($math_fallback_enabled) {
+        $captchaFallbackOk = captcha_validate_submission('contact_form', (string)($_POST['captcha_token'] ?? ''), (string)($_POST['captcha_answer'] ?? ''));
+        if (!$captchaFallbackOk) {
+          $errors[] = "Security verification failed. Please solve the captcha and try again.";
+        }
+      } else {
+        $errors[] = "reCAPTCHA check failed. Please refresh and try again.";
+      }
     }
   } else {
     if (!captcha_validate_submission('contact_form', (string)($_POST['captcha_token'] ?? ''), (string)($_POST['captcha_answer'] ?? ''))) {
@@ -238,7 +249,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
           <?php endif; ?>
 
-          <form method="post" class="row g-3" novalidate data-recaptcha-enterprise="1" data-recaptcha-action="contact_submit">
+          <form method="post" class="row g-3" novalidate data-recaptcha-v3="1" data-recaptcha-action="contact_submit">
             <input type="hidden" name="csrf_token" value="<?= h($csrf) ?>">
             <input type="hidden" name="recaptcha_token" value="">
 
@@ -290,6 +301,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <label class="form-label">Human Verification *</label>
                 <div class="small text-muted">Protected by Google reCAPTCHA.</div>
               </div>
+              <?php if ($math_fallback_enabled): ?>
+                <?= captcha_render('contact_form', 'Fallback Captcha (if reCAPTCHA fails)', false) ?>
+              <?php endif; ?>
             <?php else: ?>
               <?= captcha_render('contact_form', 'Human Verification') ?>
             <?php endif; ?>
@@ -368,8 +382,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-  var recaptchaForm = document.querySelector('form[data-recaptcha-enterprise]');
-  if (recaptchaForm && window.RECAPTCHA_SITE_KEY && window.grecaptcha && window.grecaptcha.enterprise) {
+  var recaptchaForm = document.querySelector('form[data-recaptcha-v3]');
+  if (recaptchaForm && window.RECAPTCHA_SITE_KEY) {
+    var allowMathFallback = <?= $math_fallback_enabled ? 'true' : 'false' ?>;
     recaptchaForm.addEventListener('submit', function (event) {
       if (recaptchaForm.dataset.recaptchaDone === '1') {
         recaptchaForm.dataset.recaptchaDone = '0';
@@ -379,17 +394,43 @@ document.addEventListener('DOMContentLoaded', function () {
       event.preventDefault();
       var tokenInput = recaptchaForm.querySelector('input[name="recaptcha_token"]');
       var action = recaptchaForm.getAttribute('data-recaptcha-action') || 'submit';
+      var fallbackInput = recaptchaForm.querySelector('input[name="captcha_answer"]');
 
-      window.grecaptcha.enterprise.ready(async function () {
+      if (!window.grecaptcha || typeof window.grecaptcha.execute !== 'function') {
+        if (allowMathFallback && fallbackInput && String(fallbackInput.value || '').trim() !== '') {
+          if (tokenInput) {
+            tokenInput.value = '';
+          }
+          recaptchaForm.dataset.recaptchaDone = '1';
+          recaptchaForm.submit();
+          return;
+        }
+        alert(allowMathFallback ? 'reCAPTCHA is still loading. Please wait a moment or solve fallback captcha, then submit again.' : 'reCAPTCHA is still loading. Please wait a moment and submit again.');
+        return;
+      }
+
+      window.grecaptcha.ready(async function () {
         try {
-          var token = await window.grecaptcha.enterprise.execute(window.RECAPTCHA_SITE_KEY, { action: action });
+          var token = await window.grecaptcha.execute(window.RECAPTCHA_SITE_KEY, { action: action });
           if (tokenInput) {
             tokenInput.value = token;
           }
           recaptchaForm.dataset.recaptchaDone = '1';
           recaptchaForm.submit();
         } catch (error) {
-          alert('reCAPTCHA failed to load. Please refresh and try again.');
+          if (tokenInput) {
+            tokenInput.value = '';
+          }
+          if (allowMathFallback && fallbackInput && String(fallbackInput.value || '').trim() === '') {
+            alert('reCAPTCHA is unavailable. Please solve the fallback captcha field, then submit again.');
+            return;
+          }
+          if (!allowMathFallback) {
+            alert('reCAPTCHA check failed. Please refresh and try again.');
+            return;
+          }
+          recaptchaForm.dataset.recaptchaDone = '1';
+          recaptchaForm.submit();
         }
       });
     });

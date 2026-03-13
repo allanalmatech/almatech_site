@@ -63,6 +63,7 @@ setting_set($db, 'contact_whatsapp', trim((string)($_POST['contact_whatsapp'] ??
 setting_set($db, 'contact_map_embed', trim((string)($_POST['contact_map_embed'] ?? '')));
 setting_set($db, 'recaptcha_site_key', trim((string)($_POST['recaptcha_site_key'] ?? '')));
 setting_set($db, 'recaptcha_secret_key', trim((string)($_POST['recaptcha_secret_key'] ?? '')));
+setting_set($db, 'recaptcha_fallback_math_enabled', !empty($_POST['recaptcha_fallback_math_enabled']) ? '1' : '0');
 
 // Handle file uploads for brand assets
 $brand_logo = trim((string)($_POST['brand_logo'] ?? ''));

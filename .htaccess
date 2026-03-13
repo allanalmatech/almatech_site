@@ -1,6 +1,5 @@
 # Alma Tech Consults - URL Routing & Security
 RewriteEngine On
-RewriteBase /almatech_site_final/
 
 # Prevent direct access to sensitive files
 <Files ~ "^\.">
@@ -37,4 +36,4 @@ RewriteCond %{REQUEST_FILENAME} !-d
 RewriteCond %{REQUEST_URI} !^/(index|about|services|projects|blog|team|testimonials|contact|admin|shop|assets|includes|uploads|sql)\.php$ [NC]
 RewriteRule ^([a-zA-Z0-9_-]+)/?$ page.php?slug=$1 [L,QSA]
 
-ErrorDocument 404 /almatech_site_final/404.php
+ErrorDocument 404 /404.php

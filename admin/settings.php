@@ -21,6 +21,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $currencyLabel = strtoupper(trim((string)($_POST['currency_label'] ?? 'UGX')));
         $productsPerPage = max(1, min(60, (int)($_POST['products_per_page'] ?? 15)));
         $showOutOfStock = isset($_POST['show_out_of_stock']) ? '1' : '0';
+        $watermarkEnabled = isset($_POST['image_watermark_enabled']) ? '1' : '0';
+        $watermarkText = trim((string)($_POST['image_watermark_text'] ?? ''));
+        $watermarkPosition = trim((string)($_POST['image_watermark_position'] ?? 'bottom-right'));
+
+        $allowedWatermarkPositions = [
+            'top-left',
+            'top-center',
+            'top-right',
+            'center-left',
+            'center',
+            'center-right',
+            'bottom-left',
+            'bottom-center',
+            'bottom-right',
+        ];
+        if (!in_array($watermarkPosition, $allowedWatermarkPositions, true)) {
+            $watermarkPosition = 'bottom-right';
+        }
 
         $existingShopHeroCover = trim(setting('shop_hero_cover', ''));
         $removeShopHeroCover = isset($_POST['remove_shop_hero_cover']);
@@ -45,6 +63,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'currency_label' => $currencyLabel !== '' ? $currencyLabel : 'UGX',
             'products_per_page' => (string)$productsPerPage,
             'show_out_of_stock' => $showOutOfStock,
+            'image_watermark_enabled' => $watermarkEnabled,
+            'image_watermark_text' => $watermarkText,
+            'image_watermark_position' => $watermarkPosition,
             'shop_hero_cover' => $shopHeroCoverValue,
             'search_hero_cover' => $searchHeroCoverValue,
         ];
@@ -90,6 +111,9 @@ $current = [
     'currency_label' => setting('currency_label', 'UGX'),
     'products_per_page' => setting('products_per_page', '15'),
     'show_out_of_stock' => setting('show_out_of_stock', '1'),
+    'image_watermark_enabled' => setting('image_watermark_enabled', '0'),
+    'image_watermark_text' => setting('image_watermark_text', 'Alma Tech Consults'),
+    'image_watermark_position' => setting('image_watermark_position', 'bottom-right'),
     'shop_hero_cover' => setting('shop_hero_cover', ''),
     'search_hero_cover' => setting('search_hero_cover', ''),
 ];
@@ -148,6 +172,46 @@ $flash = get_flash();
             <div class="form-check">
                 <input class="form-check-input" type="checkbox" name="show_out_of_stock" id="showOutStock" <?= $current['show_out_of_stock'] === '1' ? 'checked' : '' ?>>
                 <label class="form-check-label" for="showOutStock">Show out-of-stock products in public shop</label>
+            </div>
+        </div>
+
+        <div class="col-12 mt-2">
+            <div class="border rounded p-3 bg-light-subtle">
+                <div class="fw-semibold mb-2">Auto Watermark for Uploaded Images</div>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <div class="form-check mt-2">
+                            <input class="form-check-input" type="checkbox" name="image_watermark_enabled" id="imageWatermarkEnabled" <?= $current['image_watermark_enabled'] === '1' ? 'checked' : '' ?>>
+                            <label class="form-check-label" for="imageWatermarkEnabled">Enable auto watermark</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Watermark Text</label>
+                        <input type="text" class="form-control" name="image_watermark_text" value="<?= e($current['image_watermark_text']) ?>" placeholder="Alma Tech Consults" maxlength="80">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Watermark Position</label>
+                        <select class="form-select" name="image_watermark_position">
+                            <?php
+                            $watermarkPositions = [
+                                'top-left' => 'Top Left',
+                                'top-center' => 'Top Center',
+                                'top-right' => 'Top Right',
+                                'center-left' => 'Center Left',
+                                'center' => 'Center',
+                                'center-right' => 'Center Right',
+                                'bottom-left' => 'Bottom Left',
+                                'bottom-center' => 'Bottom Center',
+                                'bottom-right' => 'Bottom Right',
+                            ];
+                            foreach ($watermarkPositions as $value => $label):
+                            ?>
+                                <option value="<?= e($value) ?>" <?= $current['image_watermark_position'] === $value ? 'selected' : '' ?>><?= e($label) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-text mt-2">Applies to new JPG/PNG/WEBP uploads through the shop/product image upload flow.</div>
             </div>
         </div>
 

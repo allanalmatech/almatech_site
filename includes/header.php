@@ -112,6 +112,22 @@ $base_path = rtrim((string)BASE_URL, '/');
 $logo_url    = $brand_logo ? (strpos($brand_logo, 'http') === 0 ? $brand_logo : $base_path . '/' . ltrim($brand_logo, '/')) : '';
 $favicon_url = $brand_favicon ? (strpos($brand_favicon, 'http') === 0 ? $brand_favicon : $base_path . '/' . ltrim($brand_favicon, '/')) : '';
 
+$scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+$host = (string)($_SERVER['HTTP_HOST'] ?? 'localhost');
+$origin = $scheme . '://' . $host;
+$requestUri = (string)($_SERVER['REQUEST_URI'] ?? '/');
+
+$canonical_url_value = trim((string)($canonical_url ?? ($origin . $requestUri)));
+if ($canonical_url_value !== '' && !preg_match('#^https?://#i', $canonical_url_value)) {
+  $canonical_url_value = $origin . '/' . ltrim($canonical_url_value, '/');
+}
+
+$meta_description_value = trim((string)($meta_description ?? 'Professional digital services from Alma Tech Consults.'));
+$meta_image_value = trim((string)($meta_image ?? $logo_url));
+if ($meta_image_value !== '' && !preg_match('#^https?://#i', $meta_image_value)) {
+  $meta_image_value = $origin . '/' . ltrim($meta_image_value, '/');
+}
+
 /* -------------------------------------------------
  * Topbar social links
  * ------------------------------------------------- */
@@ -204,6 +220,23 @@ if ($db instanceof mysqli) {
   <meta charset="UTF-8">
   <title><?= h($page_title) ?></title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="<?= h($meta_description_value) ?>">
+  <link rel="canonical" href="<?= h($canonical_url_value) ?>">
+
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="<?= h($page_title) ?>">
+  <meta property="og:description" content="<?= h($meta_description_value) ?>">
+  <meta property="og:url" content="<?= h($canonical_url_value) ?>">
+  <?php if ($meta_image_value !== ''): ?>
+    <meta property="og:image" content="<?= h($meta_image_value) ?>">
+    <meta property="og:image:secure_url" content="<?= h($meta_image_value) ?>">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content="<?= h($meta_image_value) ?>">
+  <?php else: ?>
+    <meta name="twitter:card" content="summary">
+  <?php endif; ?>
+  <meta name="twitter:title" content="<?= h($page_title) ?>">
+  <meta name="twitter:description" content="<?= h($meta_description_value) ?>">
 
   <?php if ($favicon_url): ?>
     <link rel="icon" href="<?= h($favicon_url) ?>">
@@ -212,8 +245,11 @@ if ($db instanceof mysqli) {
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
   <link rel="stylesheet" href="<?= rtrim((string)BASE_URL, '/') ?>/assets/css/main.css">
+  <?php if (($active ?? '') === 'shop'): ?>
+    <link rel="stylesheet" href="<?= rtrim((string)BASE_URL, '/') ?>/assets/css/shop.css">
+  <?php endif; ?>
   <?php if ($recaptcha_site_key !== ''): ?>
-    <script src="https://www.google.com/recaptcha/enterprise.js?render=<?= h($recaptcha_site_key) ?>"></script>
+    <script src="https://www.google.com/recaptcha/api.js?render=<?= h($recaptcha_site_key) ?>"></script>
     <script>
       window.RECAPTCHA_SITE_KEY = <?= json_encode($recaptcha_site_key) ?>;
     </script>

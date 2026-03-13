@@ -39,7 +39,20 @@ if (!defined('DB_PASS')) {
 }
 
 if (!defined('BASE_URL')) {
-    $baseUrl = rtrim((string)(getenv('BASE_URL') ?: '/almatech_site_final'), '/');
+    $envBase = rtrim((string)(getenv('BASE_URL') ?: ''), '/');
+    if ($envBase !== '') {
+        $baseUrl = $envBase;
+    } else {
+        $projectRoot = str_replace('\\', '/', dirname(__DIR__));
+        $docRoot = str_replace('\\', '/', (string)($_SERVER['DOCUMENT_ROOT'] ?? ''));
+        $baseUrl = '';
+
+        if ($docRoot !== '' && strpos($projectRoot, rtrim($docRoot, '/')) === 0) {
+            $baseUrl = substr($projectRoot, strlen(rtrim($docRoot, '/')));
+        }
+
+        $baseUrl = '/' . trim((string)$baseUrl, '/');
+    }
     define('BASE_URL', $baseUrl === '/' ? '' : $baseUrl);
 }
 if (!defined('UPLOAD_PRODUCTS_PATH')) {

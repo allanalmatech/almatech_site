@@ -11,6 +11,33 @@ require_admin_login();
 $admin = current_admin();
 
 $categories = db()->query('SELECT id, name FROM categories WHERE status = 1 ORDER BY name ASC')->fetchAll();
+$hasProductVideoUrl = false;
+try {
+    $videoColumn = db()->query("SHOW COLUMNS FROM products LIKE 'video_url'")->fetch();
+    if (!$videoColumn) {
+        db()->exec('ALTER TABLE products ADD COLUMN video_url VARCHAR(500) NULL AFTER main_image');
+        $videoColumn = db()->query("SHOW COLUMNS FROM products LIKE 'video_url'")->fetch();
+    }
+
+    $ratingAvgColumn = db()->query("SHOW COLUMNS FROM products LIKE 'rating_avg'")->fetch();
+    if (!$ratingAvgColumn) {
+        db()->exec('ALTER TABLE products ADD COLUMN rating_avg DECIMAL(3,2) NOT NULL DEFAULT 0.00 AFTER video_url');
+    }
+
+    $ratingCountColumn = db()->query("SHOW COLUMNS FROM products LIKE 'rating_count'")->fetch();
+    if (!$ratingCountColumn) {
+        db()->exec('ALTER TABLE products ADD COLUMN rating_count INT UNSIGNED NOT NULL DEFAULT 0 AFTER rating_avg');
+    }
+
+    $viewsCountColumn = db()->query("SHOW COLUMNS FROM products LIKE 'views_count'")->fetch();
+    if (!$viewsCountColumn) {
+        db()->exec('ALTER TABLE products ADD COLUMN views_count INT UNSIGNED NOT NULL DEFAULT 0 AFTER rating_count');
+    }
+
+    $hasProductVideoUrl = (bool)$videoColumn;
+} catch (Throwable $e) {
+    $hasProductVideoUrl = false;
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_require_valid_request();
@@ -29,6 +56,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stockQty = $stockRaw !== '' ? max(0, (int)$stockRaw) : null;
         $status = (($_POST['status'] ?? 'active') === 'active') ? 1 : 0;
         $featured = (($_POST['featured'] ?? '0') === '1') ? 1 : 0;
+        $videoUrlRaw = trim((string)($_POST['video_url'] ?? ''));
+        $videoUrl = null;
+        if ($videoUrlRaw !== '') {
+            $videoParts = array_values(array_filter(array_map('trim', explode(',', $videoUrlRaw)), static function ($url) {
+                return $url !== '';
+            }));
+
+            if ($videoParts) {
+                $videoUrl = implode(', ', $videoParts);
+            }
+        }
+        $removeGalleryIdsRaw = $_POST['remove_gallery_ids'] ?? [];
+        $removeGalleryIds = [];
+        if (is_array($removeGalleryIdsRaw)) {
+            foreach ($removeGalleryIdsRaw as $galleryId) {
+                $galleryId = (int)$galleryId;
+                if ($galleryId > 0) {
+                    $removeGalleryIds[$galleryId] = true;
+                }
+            }
+            $removeGalleryIds = array_keys($removeGalleryIds);
+        }
 
         if ($categoryId <= 0 || $name === '' || $price <= 0) {
             set_flash('danger', 'Category, name, and valid price are required.');
@@ -40,12 +89,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             redirect_to(admin_url('products.php'));
         }
 
+        if ($videoUrl !== null) {
+            foreach (explode(',', $videoUrl) as $videoPart) {
+                $videoPart = trim($videoPart);
+                if ($videoPart === '') {
+                    continue;
+                }
+                if (!preg_match('#^https?://#i', $videoPart)) {
+                    set_flash('danger', 'Each video URL must start with http:// or https://');
+                    redirect_to(admin_url('products.php'));
+                }
+            }
+        }
+
         $baseSlug = slugify($name);
         $slug = make_unique_slug('products', $baseSlug, $id > 0 ? $id : null);
 
         try {
             $pdo = db();
             $pdo->beginTransaction();
+            $removedGalleryFilenames = [];
 
             $oldMainImage = null;
             if ($id > 0) {
@@ -60,8 +123,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             if ($id > 0) {
-                $stmt = $pdo->prepare('UPDATE products SET category_id = :category_id, name = :name, slug = :slug, short_description = :short_description, description = :description, price = :price, discount_price = :discount_price, stock_qty = :stock_qty, status = :status, featured = :featured, main_image = :main_image, updated_at = NOW() WHERE id = :id');
-                $stmt->execute([
+                $updateSql = 'UPDATE products SET category_id = :category_id, name = :name, slug = :slug, short_description = :short_description, description = :description, price = :price, discount_price = :discount_price, stock_qty = :stock_qty, status = :status, featured = :featured, main_image = :main_image';
+                if ($hasProductVideoUrl) {
+                    $updateSql .= ', video_url = :video_url';
+                }
+                $updateSql .= ', updated_at = NOW() WHERE id = :id';
+
+                $updateParams = [
                     ':category_id' => $categoryId,
                     ':name' => $name,
                     ':slug' => $slug,
@@ -74,15 +142,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ':featured' => $featured,
                     ':main_image' => $newMainImage ?: $oldMainImage,
                     ':id' => $id,
-                ]);
+                ];
+                if ($hasProductVideoUrl) {
+                    $updateParams[':video_url'] = $videoUrl;
+                }
+
+                $stmt = $pdo->prepare($updateSql);
+                $stmt->execute($updateParams);
                 $productId = $id;
             } else {
                 if (!$newMainImage) {
                     throw new RuntimeException('Main image is required for new products.');
                 }
 
-                $stmt = $pdo->prepare('INSERT INTO products (category_id, name, slug, short_description, description, price, discount_price, stock_qty, status, featured, main_image, created_at, updated_at) VALUES (:category_id, :name, :slug, :short_description, :description, :price, :discount_price, :stock_qty, :status, :featured, :main_image, NOW(), NOW())');
-                $stmt->execute([
+                $insertSql = 'INSERT INTO products (category_id, name, slug, short_description, description, price, discount_price, stock_qty, status, featured, main_image';
+                $insertValuesSql = ' VALUES (:category_id, :name, :slug, :short_description, :description, :price, :discount_price, :stock_qty, :status, :featured, :main_image';
+                if ($hasProductVideoUrl) {
+                    $insertSql .= ', video_url';
+                    $insertValuesSql .= ', :video_url';
+                }
+                $insertSql .= ', created_at, updated_at)';
+                $insertValuesSql .= ', NOW(), NOW())';
+
+                $insertParams = [
                     ':category_id' => $categoryId,
                     ':name' => $name,
                     ':slug' => $slug,
@@ -94,7 +176,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ':status' => $status,
                     ':featured' => $featured,
                     ':main_image' => $newMainImage,
-                ]);
+                ];
+                if ($hasProductVideoUrl) {
+                    $insertParams[':video_url'] = $videoUrl;
+                }
+
+                $stmt = $pdo->prepare($insertSql . $insertValuesSql);
+                $stmt->execute($insertParams);
                 $productId = (int)$pdo->lastInsertId();
             }
 
@@ -119,10 +207,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
 
+            if ($id > 0 && $removeGalleryIds) {
+                $inPlaceholders = implode(',', array_fill(0, count($removeGalleryIds), '?'));
+                $selectSql = "SELECT id, image_path FROM product_images WHERE product_id = ? AND id IN ({$inPlaceholders})";
+                $selectStmt = $pdo->prepare($selectSql);
+                $selectStmt->execute(array_merge([$productId], $removeGalleryIds));
+                $rowsToDelete = $selectStmt->fetchAll();
+
+                if ($rowsToDelete) {
+                    $foundIds = [];
+                    foreach ($rowsToDelete as $row) {
+                        $foundIds[] = (int)$row['id'];
+                        $removedGalleryFilenames[] = (string)($row['image_path'] ?? '');
+                    }
+
+                    $deletePlaceholders = implode(',', array_fill(0, count($foundIds), '?'));
+                    $deleteSql = "DELETE FROM product_images WHERE product_id = ? AND id IN ({$deletePlaceholders})";
+                    $deleteStmt = $pdo->prepare($deleteSql);
+                    $deleteStmt->execute(array_merge([$productId], $foundIds));
+                }
+            }
+
             $pdo->commit();
 
             if ($newMainImage && $oldMainImage && $newMainImage !== $oldMainImage) {
                 remove_product_image_file($oldMainImage);
+            }
+
+            foreach ($removedGalleryFilenames as $filename) {
+                remove_product_image_file($filename);
             }
 
             set_flash('success', $id > 0 ? 'Product updated successfully.' : 'Product created successfully.');
@@ -249,9 +362,12 @@ $flash = get_flash();
 <div class="admin-card p-4">
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h4 class="mb-0">Products</h4>
-    <button class="btn btn-orange" data-bs-toggle="modal" data-bs-target="#productFormModal">
-        <i class="bi bi-plus-circle me-1"></i><?= $editProduct ? 'Edit Product' : 'Add Product' ?>
-    </button>
+    <div class="d-flex gap-2">
+        <a class="btn btn-outline-orange" href="<?= e(admin_url('product_ratings.php')) ?>"><i class="bi bi-star-half me-1"></i>Ratings & Views</a>
+        <button class="btn btn-orange" data-bs-toggle="modal" data-bs-target="#productFormModal">
+            <i class="bi bi-plus-circle me-1"></i><?= $editProduct ? 'Edit Product' : 'Add Product' ?>
+        </button>
+    </div>
 </div>
 
 <div class="card table-card p-4">
@@ -363,12 +479,12 @@ $flash = get_flash();
 <div class="modal fade <?= $editProduct ? 'show' : '' ?>" id="productFormModal" tabindex="-1" <?= $editProduct ? 'style="display:block" aria-modal="true" role="dialog"' : '' ?>>
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content">
-            <form method="post" enctype="multipart/form-data">
+            <form method="post" enctype="multipart/form-data" id="productForm">
                 <div class="modal-header">
                     <h5 class="modal-title"><?= $editProduct ? 'Edit Product' : 'Add Product' ?></h5>
                     <a href="<?= e(admin_url('products.php')) ?>" class="btn-close"></a>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body overflow-auto" style="max-height: calc(100vh - 210px);">
                     <div class="row g-3">
                         <?= csrf_field() ?>
                         <input type="hidden" name="action" value="save">
@@ -443,14 +559,40 @@ $flash = get_flash();
                             <input type="file" class="form-control" name="gallery_images[]" accept="image/jpeg,image/png,image/webp" multiple>
                         </div>
 
+                        <div class="col-md-3">
+                            <label class="form-label">Product Video URL (optional)</label>
+                            <input
+                                type="url"
+                                class="form-control"
+                                name="video_url"
+                                value="<?= e((string)($editProduct['video_url'] ?? '')) ?>"
+                                placeholder="https://..."
+                            >
+                            <div class="form-text">Supports direct MP4/WebM and YouTube links. Use commas for fallback URLs.</div>
+                        </div>
+
                         <?php if ($editGallery): ?>
                             <div class="col-12">
-                                <div class="small text-muted mb-2">Existing Gallery</div>
-                                <div class="d-flex flex-wrap gap-2">
+                                <div class="small text-muted mb-2">Existing Gallery (click X on an image to remove, then save)</div>
+                                <div class="d-flex flex-wrap gap-2" data-gallery-remove-list>
                                     <?php foreach ($editGallery as $img): ?>
-                                        <img src="<?= e(app_url('uploads/products/' . $img['image_path'])) ?>" alt="" style="width:72px;height:72px;object-fit:cover;border-radius:8px;">
+                                        <div class="position-relative border rounded p-2" style="width:96px;" data-gallery-item>
+                                            <img src="<?= e(app_url('uploads/products/' . $img['image_path'])) ?>" alt="" style="width:72px;height:72px;object-fit:cover;border-radius:8px;display:block;margin:0 auto;">
+                                            <button
+                                                type="button"
+                                                class="btn btn-danger btn-sm rounded-circle position-absolute d-inline-flex align-items-center justify-content-center"
+                                                style="width:26px;height:26px;top:-8px;right:-8px;padding:0;"
+                                                data-remove-gallery-btn
+                                                data-gallery-id="<?= (int)$img['id'] ?>"
+                                                aria-label="Remove image"
+                                                title="Remove image"
+                                            >
+                                                <i class="bi bi-x"></i>
+                                            </button>
+                                        </div>
                                     <?php endforeach; ?>
                                 </div>
+                                <div id="removeGalleryInputs"></div>
                             </div>
                         <?php endif; ?>
                     </div>
@@ -490,10 +632,42 @@ $flash = get_flash();
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     var deleteModal = document.getElementById('deleteProductModal');
-    deleteModal.addEventListener('show.bs.modal', function (event) {
-        var button = event.relatedTarget;
-        document.getElementById('deleteProductId').value = button.getAttribute('data-id');
-        document.getElementById('deleteProductName').textContent = button.getAttribute('data-name');
+    if (deleteModal) {
+        deleteModal.addEventListener('show.bs.modal', function (event) {
+            var button = event.relatedTarget;
+            document.getElementById('deleteProductId').value = button.getAttribute('data-id');
+            document.getElementById('deleteProductName').textContent = button.getAttribute('data-name');
+        });
+    }
+
+    var removeButtons = document.querySelectorAll('[data-remove-gallery-btn]');
+    var removeInputsWrap = document.getElementById('removeGalleryInputs');
+
+    removeButtons.forEach(function (button) {
+        button.addEventListener('click', function () {
+            var galleryId = button.getAttribute('data-gallery-id');
+            if (!galleryId || !removeInputsWrap) {
+                return;
+            }
+
+            if (!window.confirm('Remove this gallery image? This change applies when you click Save Product.')) {
+                return;
+            }
+
+            var existingInput = removeInputsWrap.querySelector('input[name="remove_gallery_ids[]"][value="' + galleryId + '"]');
+            if (!existingInput) {
+                var hiddenInput = document.createElement('input');
+                hiddenInput.type = 'hidden';
+                hiddenInput.name = 'remove_gallery_ids[]';
+                hiddenInput.value = galleryId;
+                removeInputsWrap.appendChild(hiddenInput);
+            }
+
+            var galleryItem = button.closest('[data-gallery-item]');
+            if (galleryItem) {
+                galleryItem.remove();
+            }
+        });
     });
 });
 </script>
