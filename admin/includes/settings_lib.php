@@ -2,7 +2,7 @@
 // admin/includes/settings_lib.php
 declare(strict_types=1);
 
-function setting_get(mysqli $db, string $key, ?string $default = null): ?string {
+function setting_get(mysqli $db, string $key, string $default = null) {
   $stmt = $db->prepare("SELECT `value` FROM settings WHERE `key` = ? LIMIT 1");
   if (!$stmt) return $default;
   $stmt->bind_param("s", $key);
@@ -14,7 +14,7 @@ function setting_get(mysqli $db, string $key, ?string $default = null): ?string 
   return $out !== null ? $out : $default;
 }
 
-function setting_set(mysqli $db, string $key, ?string $value): bool {
+function setting_set(mysqli $db, string $key, $value): bool {
   $stmt = $db->prepare("
     INSERT INTO settings (`key`, `value`, updated_at)
     VALUES (?, ?, NOW())

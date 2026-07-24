@@ -238,7 +238,7 @@ foreach ($slides as $s) {
     'caption_align' => $align,
   ];
 }
-usort($cleanSlides, fn($a,$b) => $a['sort_order'] <=> $b['sort_order']);
+usort($cleanSlides, function ($a, $b) { return $a['sort_order'] <=> $b['sort_order']; });
 $slider['slides'] = $cleanSlides;
 ?>
 

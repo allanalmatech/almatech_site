@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-function ensure_dir(string $dir): void {
+function ensure_dir(string $dir) {
   if (!is_dir($dir)) {
     mkdir($dir, 0775, true);
   }
@@ -14,7 +14,7 @@ function safe_slug(string $s): string {
   return $s ?: 'item';
 }
 
-function unique_slug(mysqli $db, string $table, string $slug, ?int $ignoreId = null): string {
+function unique_slug(mysqli $db, string $table, string $slug, int $ignoreId = null): string {
   $base = $slug;
   $i = 0;
 
@@ -40,7 +40,7 @@ function unique_slug(mysqli $db, string $table, string $slug, ?int $ignoreId = n
   }
 }
 
-function upload_image_or_null(array $file, string $destDir, array $allowed = ['image/jpeg','image/png','image/webp'], int $maxBytes = 3000000): ?string {
+function upload_image_or_null(array $file, string $destDir, array $allowed = ['image/jpeg','image/png','image/webp'], int $maxBytes = 3000000) {
   if (empty($file['name']) || ($file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
     return null;
   }
@@ -60,12 +60,12 @@ function upload_image_or_null(array $file, string $destDir, array $allowed = ['i
     throw new RuntimeException("Invalid image type.");
   }
 
-  $ext = match($mime) {
+  $extensions = [
     'image/jpeg' => 'jpg',
     'image/png'  => 'png',
     'image/webp' => 'webp',
-    default => 'img'
-  };
+  ];
+  $ext = $extensions[$mime] ?? 'img';
 
   ensure_dir($destDir);
 
@@ -79,7 +79,7 @@ function upload_image_or_null(array $file, string $destDir, array $allowed = ['i
   return $name; // store filename only
 }
 
-function delete_file_if_exists(string $dir, ?string $filename): void {
+function delete_file_if_exists(string $dir, $filename) {
   if (!$filename) return;
   $p = rtrim($dir, '/\\') . DIRECTORY_SEPARATOR . $filename;
   if (is_file($p)) @unlink($p);

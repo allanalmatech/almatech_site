@@ -20,7 +20,7 @@ $categories = ['All'];
 if ($db instanceof mysqli) {
 
   $sql = "
-    SELECT title, slug, short_desc, category, cover_image, created_at
+    SELECT title, slug, short_desc, category, cover_image, project_url, created_at
     FROM projects
     WHERE status = 'completed'
     ORDER BY created_at DESC
@@ -30,7 +30,7 @@ if ($db instanceof mysqli) {
 
   if ($stmt) {
     $stmt->execute();
-    $stmt->bind_result($title, $slug, $short_desc, $category, $cover_image, $created_at);
+    $stmt->bind_result($title, $slug, $short_desc, $category, $cover_image, $project_url, $created_at);
 
     while ($stmt->fetch()) {
       $projects[] = [
@@ -41,6 +41,7 @@ if ($db instanceof mysqli) {
         'year'     => $created_at ? date('Y', strtotime((string)$created_at)) : date('Y'),
         'client'   => 'Client', // optional: replace with DB field later
         'cover'    => !empty($cover_image) ? (string)$cover_image : 'assets/img/project-placeholder-1.jpg',
+        'project_url' => !empty($project_url) ? (string)$project_url : null,
       ];
     }
 
@@ -120,7 +121,13 @@ $BASE = defined('BASE_URL') ? rtrim((string)BASE_URL, '/') : '';
 
           // safe join for image + project url
           $image_url = $BASE ? ($BASE . '/' . ltrim($cover, '/')) : ltrim($cover, '/');
-          $project_url = $BASE ? ($BASE . '/projects/' . rawurlencode((string)$p['slug'])) : ('projects/' . rawurlencode((string)$p['slug']));
+
+          // Use external URL if available, otherwise use internal project page
+          if (!empty($p['project_url'])) {
+            $project_url = (string)$p['project_url'];
+          } else {
+            $project_url = $BASE ? ($BASE . '/projects/' . rawurlencode((string)$p['slug'])) : ('projects/' . rawurlencode((string)$p['slug']));
+          }
         ?>
         <div class="col-md-6 col-lg-4 project-item" data-category="<?= h($cat) ?>">
           <div class="project-card h-100 d-flex flex-column">

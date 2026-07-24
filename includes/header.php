@@ -50,6 +50,7 @@ $visible_links_default = [
   'about'        => true,
   'services'     => true,
   'projects'     => true,
+  'shop'         => false,
   'blog'         => true,
   'team'         => true,
   'testimonials' => true,
@@ -100,14 +101,14 @@ $favicon_url = $brand_favicon ? (strpos($brand_favicon, 'http') === 0 ? $brand_f
  * Base nav items
  * ------------------------------------------------- */
 $nav_items = [
-  'home'         => ['title'=>'Home',         'href'=>'index.php'],
-  'about'        => ['title'=>'About',        'href'=>'about.php'],
-  'services'     => ['title'=>'Services',     'href'=>'services.php'],
-  'projects'     => ['title'=>'Projects',     'href'=>'projects.php'],
-  'blog'         => ['title'=>'Blog',         'href'=>'blog.php'],
-  'team'         => ['title'=>'Team',         'href'=>'team.php'],
-  'testimonials' => ['title'=>'Testimonials', 'href'=>'testimonials.php'],
-  'contact'      => ['title'=>'Contact',      'href'=>'contact.php'],
+  'home'         => ['title'=>'Home',         'href'=> $BASE . '/index.php'],
+  'about'        => ['title'=>'About',        'href'=> $BASE . '/about.php'],
+  'services'     => ['title'=>'Services',     'href'=> $BASE . '/services.php'],
+  'projects'     => ['title'=>'Projects',     'href'=> $BASE . '/projects.php'],
+  'blog'         => ['title'=>'Blog',         'href'=> $BASE . '/blog.php'],
+  'team'         => ['title'=>'Team',         'href'=> $BASE . '/team.php'],
+  'testimonials' => ['title'=>'Testimonials', 'href'=> $BASE . '/testimonials.php'],
+  'contact'      => ['title'=>'Contact',      'href'=> $BASE . '/contact.php'],
 ];
 
 /* -------------------------------------------------
@@ -123,7 +124,7 @@ if ($db instanceof mysqli) {
       if ($slug && !isset($nav_items[$slug])) {
         $nav_items[$slug] = [
           'title' => $p['title'],
-          'href'  => 'page.php?slug=' . urlencode($slug),
+          'href'  => $BASE . '/page.php?slug=' . urlencode($slug),
         ];
         if (!in_array($slug, $nav_order, true)) {
           $nav_order[] = $slug;
@@ -168,7 +169,7 @@ if ($db instanceof mysqli) {
 <!-- Navbar -->
 <nav class="navbar navbar-expand-lg bg-white sticky-top nav-shadow">
   <div class="container">
-    <a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="index.php">
+    <a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="<?= h($BASE) ?>/index.php">
       <?php if ($logo_url): ?>
         <img src="<?= h($logo_url) ?>" style="height:32px">
       <?php else: ?>
@@ -199,8 +200,12 @@ if ($db instanceof mysqli) {
       </ul>
 
       <div class="ms-lg-3 d-flex gap-2">
-        <a href="contact.php" class="btn btn-outline-orange">Get a Quote</a>
-        <a href="contact.php" class="btn btn-whatsapp-icon rounded-circle">
+        <?php if (!empty($visible_links['shop'])): ?>
+          <a href="<?= h($BASE) ?>/shop/" class="btn btn-outline-orange" title="Shop" aria-label="Shop">
+            <i class="bi bi-cart3 me-1"></i> Shop
+          </a>
+        <?php endif; ?>
+        <a href="<?= h($BASE) ?>/contact.php" class="btn btn-whatsapp-icon rounded-circle">
           <i class="bi bi-whatsapp"></i>
         </a>
       </div>

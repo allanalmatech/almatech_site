@@ -107,7 +107,7 @@ $csrf = csrf_token();
 
 // WhatsApp helper
 $waPhone = preg_replace('/\D+/', '', $lead['phone']);
-if ($waPhone !== '' && str_starts_with($waPhone, '0')) {
+if ($waPhone !== '' && strpos($waPhone, '0') === 0) {
   // optional local formatting; you may prefer +256 format in DB
 }
 $waText = "Hello " . $lead['name'] . ", we received your enquiry about " . ($lead['service'] ?: 'our services') . ". How can we help?";

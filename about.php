@@ -144,7 +144,7 @@ if ($stmt) {
       call_user_func_array([$stmt, 'bind_result'], $bind);
       while ($stmt->fetch()) {
         $testimonials[] = $row;
-        $row = array_map(fn($v) => $v, $row); // detach
+        $row = array_map(function ($v) { return $v; }, $row); // detach
       }
     }
   }

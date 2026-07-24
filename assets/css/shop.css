@@ -1,0 +1,45 @@
+.shop-hero {
+    background: linear-gradient(120deg, #dbeafe, #f0f9ff);
+    border-radius: 1rem;
+}
+
+.product-card {
+    border: 0;
+    border-radius: .9rem;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, .08);
+    transition: transform .15s ease, box-shadow .15s ease;
+}
+
+.product-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 28px rgba(15, 23, 42, .14);
+}
+
+.product-card img {
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    border-top-left-radius: .9rem;
+    border-top-right-radius: .9rem;
+}
+
+.category-pill {
+    text-decoration: none;
+    border: 1px solid #cbd5e1;
+    color: #0f172a;
+    border-radius: 999px;
+    padding: .35rem .8rem;
+    font-size: .9rem;
+}
+
+.category-pill:hover,
+.category-pill.active {
+    background: #0f172a;
+    color: #fff;
+    border-color: #0f172a;
+}
+
+.empty-state {
+    border: 1px dashed #cbd5e1;
+    background: #f8fafc;
+    border-radius: .75rem;
+}

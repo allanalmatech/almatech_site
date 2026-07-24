@@ -1,12 +1,15 @@
 <?php
 declare(strict_types=1);
 
-$db_host = "localhost";
-$db_user = "root";
-$db_pass = "";
-$db_name = "almatech_site";
+require_once __DIR__ . '/env.php';
 
-$mysqli = new mysqli($db_host, $db_user, $db_pass, $db_name);
+$db_host = (string)env_value('DB_HOST', 'localhost');
+$db_user = (string)env_value('DB_USER', '');
+$db_pass = (string)env_value('DB_PASS', '');
+$db_name = (string)env_value('DB_NAME', '');
+$db_port = (int)env_value('DB_PORT', '3306');
+
+$mysqli = new mysqli($db_host, $db_user, $db_pass, $db_name, $db_port);
 if ($mysqli->connect_errno) {
   $GLOBALS['db'] = null;
 } else {

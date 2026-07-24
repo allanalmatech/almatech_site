@@ -51,6 +51,8 @@ $status = 'draft';
 $is_featured = 0;
 $tech_stack_str = '';
 $cover_image_url = '';
+$project_url = '';
+$use_project_url = 0;
 
 // -------------------- Handle POST (Create) --------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -64,6 +66,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $status     = trim((string)($_POST['status'] ?? 'draft'));
   $is_featured = !empty($_POST['is_featured']) ? 1 : 0;
   $tech_stack_str = trim((string)($_POST['tech_stack'] ?? ''));
+  $use_project_url = !empty($_POST['use_project_url']) ? 1 : 0;
+  $project_url = $use_project_url ? trim((string)($_POST['project_url'] ?? '')) : '';
 
   if ($title === '') $errors[] = "Title is required.";
   if ($short_desc === '') $errors[] = "Short description is required.";
@@ -140,8 +144,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
   if (empty($errors)) {
     $sql = "INSERT INTO projects
-      (title, slug, short_desc, full_desc, category, status, is_featured, cover_image, tech_stack, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())";
+      (title, slug, short_desc, full_desc, category, project_url, status, is_featured, cover_image, tech_stack, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())";
 
     $stmt = $db->prepare($sql);
     if (!$stmt) {
@@ -154,6 +158,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $short_desc,
         $full_desc,
         $category,
+        $project_url,
         $status,
         $is_featured,
         $cover_image_url,
@@ -244,6 +249,21 @@ $csrf = csrf_token();
           </div>
 
           <div class="col-12">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="use_project_url" id="use_project_url" value="1" <?= $use_project_url ? 'checked' : '' ?> onchange="toggleProjectUrl()">
+              <label class="form-check-label" for="use_project_url">
+                Use external URL for this project
+              </label>
+            </div>
+          </div>
+
+          <div class="col-12" id="project_url_field" style="<?= $use_project_url ? '' : 'display: none;' ?>">
+            <label class="form-label">Project URL</label>
+            <input class="form-control" name="project_url" value="<?= h($project_url) ?>" placeholder="https://example.com/project">
+            <div class="form-text">External URL where users can view this project (e.g., GitHub, live demo, etc.)</div>
+          </div>
+
+          <div class="col-12">
             <label class="form-label">Short Description *</label>
             <input class="form-control" name="short_desc" value="<?= h($short_desc) ?>" required>
           </div>
@@ -291,5 +311,18 @@ $csrf = csrf_token();
 
   </div>
 </div>
+
+<script>
+function toggleProjectUrl() {
+  const checkbox = document.getElementById('use_project_url');
+  const urlField = document.getElementById('project_url_field');
+
+  if (checkbox.checked) {
+    urlField.style.display = 'block';
+  } else {
+    urlField.style.display = 'none';
+  }
+}
+</script>
 
 <?php require_once __DIR__ . '/../includes/admin_footer.php'; ?>

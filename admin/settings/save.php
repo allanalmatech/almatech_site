@@ -13,14 +13,14 @@ function is_ajax(): bool {
     && strtolower((string)$_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
 }
 
-function json_fail(int $code, string $msg): void {
+function json_fail(int $code, string $msg) {
   http_response_code($code);
   header('Content-Type: application/json; charset=utf-8');
   echo json_encode(['success' => false, 'error' => $msg]);
   exit;
 }
 
-function json_ok(string $msg = 'Saved'): void {
+function json_ok(string $msg = 'Saved') {
   header('Content-Type: application/json; charset=utf-8');
   echo json_encode(['success' => true, 'message' => $msg]);
   exit;

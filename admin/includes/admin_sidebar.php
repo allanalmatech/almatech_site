@@ -2,18 +2,6 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../../config.php';
-
-$menu = [
-  ['key' => 'dashboard', 'label' => 'Dashboard', 'icon' => 'bi-speedometer2', 'href' => ADMIN_URL . 'dashboard.php'],
-  ['key' => 'services',  'label' => 'Services',  'icon' => 'bi-grid-1x2',     'href' => ADMIN_URL . 'services/list.php'],
-  ['key' => 'projects',  'label' => 'Projects',  'icon' => 'bi-briefcase',    'href' => ADMIN_URL . 'projects/list.php'],
-  ['key' => 'posts',     'label' => 'Blog Posts','icon' => 'bi-journal-text', 'href' => ADMIN_URL . 'posts/list.php'],
-  ['key' => 'pages',     'label' => 'Pages',     'icon' => 'bi-file-text',    'href' => ADMIN_URL . 'pages/index.php'],
-  ['key' => 'team',      'label' => 'Team',      'icon' => 'bi-people',       'href' => ADMIN_URL . 'team/list.php'],
-  ['key' => 'testimonials','label' => 'Testimonials','icon' => 'bi-chat-quote', 'href' => ADMIN_URL . 'testimonials/list.php'],
-  ['key' => 'leads',     'label' => 'Leads',     'icon' => 'bi-inbox',        'href' => ADMIN_URL . 'leads/list.php'],
-  ['key' => 'settings',  'label' => 'Settings',  'icon' => 'bi-gear',         'href' => ADMIN_URL . 'settings/index.php'],
-];
 ?>
 
 <!-- Sidebar (offcanvas on mobile, fixed column on desktop) -->
@@ -50,13 +38,43 @@ $menu = [
 
     <!-- Menu -->
     <div class="admin-menu">
-      <?php foreach ($menu as $m): ?>
-        <?php $isActive = (($active_admin ?? '') === $m['key']); ?>
-        <a class="admin-link <?= $isActive ? 'active' : '' ?>" href="<?= h($m['href']) ?>">
-          <i class="bi <?= h($m['icon']) ?>"></i>
-          <span><?= h($m['label']) ?></span>
+      <div class="small text-uppercase text-muted px-3 pt-2 pb-1" style="letter-spacing:.04em; font-size:.68rem;">Overview</div>
+      <a class="admin-link <?= (($active_admin ?? '') === 'dashboard') ? 'active' : '' ?>" href="<?= h(ADMIN_URL . 'dashboard.php') ?>">
+        <i class="bi bi-speedometer2"></i>
+        <span>Dashboard</span>
+      </a>
+
+      <?php $shopKeys = ['shop_categories', 'shop_products', 'shop_settings']; ?>
+      <?php $shopOpen = in_array(($active_admin ?? ''), $shopKeys, true); ?>
+      <div class="small text-uppercase text-muted px-3 pt-2 pb-1" style="letter-spacing:.04em; font-size:.68rem;">Shop Management</div>
+      <a class="admin-link d-flex justify-content-between align-items-center <?= $shopOpen ? 'active' : '' ?>" data-bs-toggle="collapse" href="#shopSubmenu" role="button" aria-expanded="<?= $shopOpen ? 'true' : 'false' ?>" aria-controls="shopSubmenu">
+        <span><i class="bi bi-cart me-2"></i>Shop</span>
+        <i class="bi <?= $shopOpen ? 'bi-chevron-up' : 'bi-chevron-down' ?> small"></i>
+      </a>
+      <div class="collapse <?= $shopOpen ? 'show' : '' ?>" id="shopSubmenu">
+        <a class="admin-link ps-5 <?= (($active_admin ?? '') === 'shop_categories') ? 'active' : '' ?>" href="<?= h(ADMIN_URL . 'categories.php') ?>">
+          <i class="bi bi-tags"></i>
+          <span>Categories</span>
         </a>
-      <?php endforeach; ?>
+        <a class="admin-link ps-5 <?= (($active_admin ?? '') === 'shop_products') ? 'active' : '' ?>" href="<?= h(ADMIN_URL . 'products.php') ?>">
+          <i class="bi bi-box-seam"></i>
+          <span>Products</span>
+        </a>
+        <a class="admin-link ps-5 <?= (($active_admin ?? '') === 'shop_settings') ? 'active' : '' ?>" href="<?= h(ADMIN_URL . 'settings.php') ?>">
+          <i class="bi bi-sliders"></i>
+          <span>Shop Settings</span>
+        </a>
+      </div>
+
+      <div class="small text-uppercase text-muted px-3 pt-2 pb-1" style="letter-spacing:.04em; font-size:.68rem;">Website Content</div>
+      <a class="admin-link <?= (($active_admin ?? '') === 'services') ? 'active' : '' ?>" href="<?= h(ADMIN_URL . 'services/list.php') ?>"><i class="bi bi-grid-1x2"></i><span>Services</span></a>
+      <a class="admin-link <?= (($active_admin ?? '') === 'projects') ? 'active' : '' ?>" href="<?= h(ADMIN_URL . 'projects/list.php') ?>"><i class="bi bi-briefcase"></i><span>Projects</span></a>
+      <a class="admin-link <?= (($active_admin ?? '') === 'posts') ? 'active' : '' ?>" href="<?= h(ADMIN_URL . 'posts/list.php') ?>"><i class="bi bi-journal-text"></i><span>Blog Posts</span></a>
+      <a class="admin-link <?= (($active_admin ?? '') === 'pages') ? 'active' : '' ?>" href="<?= h(ADMIN_URL . 'pages/index.php') ?>"><i class="bi bi-file-text"></i><span>Pages</span></a>
+      <a class="admin-link <?= (($active_admin ?? '') === 'team') ? 'active' : '' ?>" href="<?= h(ADMIN_URL . 'team/list.php') ?>"><i class="bi bi-people"></i><span>Team</span></a>
+      <a class="admin-link <?= (($active_admin ?? '') === 'testimonials') ? 'active' : '' ?>" href="<?= h(ADMIN_URL . 'testimonials/list.php') ?>"><i class="bi bi-chat-quote"></i><span>Testimonials</span></a>
+      <a class="admin-link <?= (($active_admin ?? '') === 'leads') ? 'active' : '' ?>" href="<?= h(ADMIN_URL . 'leads/list.php') ?>"><i class="bi bi-inbox"></i><span>Leads</span></a>
+      <a class="admin-link <?= (($active_admin ?? '') === 'settings') ? 'active' : '' ?>" href="<?= h(ADMIN_URL . 'settings/index.php') ?>"><i class="bi bi-gear"></i><span>Settings</span></a>
     </div>
 
     <!-- Bottom area pinned -->

@@ -15,7 +15,7 @@ function csrf_field(): string {
   return '<input type="hidden" name="csrf_token" value="'.$t.'">';
 }
 
-function csrf_verify_or_die(): void {
+function csrf_verify_or_die() {
   $posted = (string)($_POST['csrf_token'] ?? '');
   $sess   = (string)($_SESSION['csrf_token'] ?? '');
   if (!$posted || !$sess || !hash_equals($sess, $posted)) {

@@ -1,133 +1,62 @@
 <?php
 declare(strict_types=1);
 
-require_once __DIR__ . '/../includes/db.php';
-require_once __DIR__ . '/../includes/helpers.php';
+require_once __DIR__ . '/../config/config.php';
+require_once __DIR__ . '/../includes/functions.php';
+require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/csrf.php';
 
-if (session_status() === PHP_SESSION_NONE) session_start();
-
-if (!empty($_SESSION['admin']['id'])) {
-  redirect("dashboard.php");
+if (is_logged_in()) {
+    redirect_to(admin_url('dashboard.php'));
 }
-
-csrf_init();
-$flash = flash_get();
-
-$email = trim((string)($_POST['email'] ?? ''));
-$password = (string)($_POST['password'] ?? '');
-$errors = [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-  if (!csrf_validate((string)($_POST['csrf_token'] ?? ''))) {
-    $errors[] = "Security check failed. Refresh and try again.";
-  }
+    csrf_require_valid_request();
 
-  if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-    $errors[] = "Enter a valid email.";
-  }
-  if ($password === '') {
-    $errors[] = "Enter your password.";
-  }
+    $identity = trim((string)($_POST['identity'] ?? ''));
+    $password = (string)($_POST['password'] ?? '');
 
-  if (!$errors) {
-    $stmt = $mysqli->prepare("SELECT id, name, email, password_hash, role, is_active FROM admin_users WHERE email = ? LIMIT 1");
-    $stmt->bind_param("s", $email);
-    $stmt->execute();
-    $res = $stmt->get_result();
-    $user = $res ? $res->fetch_assoc() : null;
-    $stmt->close();
-
-    if (!$user || (int)$user['is_active'] !== 1) {
-      $errors[] = "Invalid login details.";
-    } else {
-      if (!password_verify($password, (string)$user['password_hash'])) {
-        $errors[] = "Invalid login details.";
-      } else {
-        session_regenerate_id(true);
-        $_SESSION['admin'] = [
-          'id' => (int)$user['id'],
-          'name' => (string)$user['name'],
-          'email' => (string)$user['email'],
-          'role' => (string)$user['role'],
-        ];
-        flash_set("success", "Welcome back, " . $_SESSION['admin']['name'] . "!");
-        redirect("dashboard.php");
-      }
+    if (admin_login_attempt($identity, $password)) {
+        set_flash('success', 'Welcome back.');
+        redirect_to(admin_url('dashboard.php'));
     }
-  }
+
+    set_flash('danger', 'Invalid login credentials.');
+    redirect_to(admin_url('login.php'));
 }
+
+$flash = get_flash();
 ?>
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Admin Login | Alma Tech Consults</title>
-
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="../assets/css/main.css">
-  <link rel="stylesheet" href="../assets/css/admin.css">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Admin Login</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { min-height: 100vh; background: linear-gradient(135deg, #f8fafc, #dbeafe); }
+        .login-card { max-width: 420px; width: 100%; border: 0; border-radius: 1rem; box-shadow: 0 10px 35px rgba(15,23,42,.14); }
+    </style>
 </head>
-<body class="admin-bg">
-
-<div class="container py-5">
-  <div class="row justify-content-center">
-    <div class="col-md-10 col-lg-6 col-xl-5">
-
-      <div class="admin-card p-4 p-md-5">
-        <div class="text-center mb-4">
-          <div class="admin-logo mx-auto mb-2"><i class="bi bi-shield-lock"></i></div>
-          <h1 class="h4 fw-bold mb-1">Admin Login</h1>
-          <p class="text-muted mb-0">Sign in to manage the website.</p>
-        </div>
-
+<body class="d-flex align-items-center justify-content-center p-3">
+    <div class="card login-card p-4">
+        <h1 class="h4 mb-3">Shop Admin Login</h1>
         <?php if ($flash): ?>
-          <div class="alert alert-<?= h($flash['type']) ?>"><?= h($flash['msg']) ?></div>
+            <div class="alert alert-<?= e($flash['type']) ?>"><?= e($flash['message']) ?></div>
         <?php endif; ?>
-
-        <?php if ($errors): ?>
-          <div class="alert alert-danger">
-            <div class="fw-semibold mb-1">Fix the following:</div>
-            <ul class="mb-0">
-              <?php foreach ($errors as $e): ?>
-                <li><?= h($e) ?></li>
-              <?php endforeach; ?>
-            </ul>
-          </div>
-        <?php endif; ?>
-
-        <form method="post" class="row g-3" novalidate>
-          <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">
-
-          <div class="col-12">
-            <label class="form-label">Email</label>
-            <input class="form-control" type="email" name="email" value="<?= h($email) ?>" placeholder="admin@..." required>
-          </div>
-
-          <div class="col-12">
-            <label class="form-label">Password</label>
-            <div class="input-group">
-              <input class="form-control" type="password" name="password" placeholder="••••••••" required>
-              <span class="input-group-text"><i class="bi bi-key"></i></span>
+        <form method="post" novalidate>
+            <?= csrf_field() ?>
+            <div class="mb-3">
+                <label class="form-label">Username or Email</label>
+                <input type="text" name="identity" class="form-control" required>
             </div>
-          </div>
-
-          <div class="col-12">
-            <button class="btn btn-orange btn-lg w-100">
-              Sign In <i class="bi bi-arrow-right ms-1"></i>
-            </button>
-          </div>
-
-          <div class="col-12 small text-muted text-center">
-            Protected area • Alma Tech Consults
-          </div>
+            <div class="mb-3">
+                <label class="form-label">Password</label>
+                <input type="password" name="password" class="form-control" required>
+            </div>
+            <button class="btn btn-primary w-100" type="submit">Sign In</button>
         </form>
-      </div>
-
     </div>
-  </div>
-</div>
-
 </body>
 </html>

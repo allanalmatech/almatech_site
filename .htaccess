@@ -20,10 +20,20 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^projects/([a-zA-Z0-9_-]+)/?$ project.php?slug=$1 [L,QSA]
 
+# Shop module routes
+RewriteRule ^shop/?$ shop/index.php [L,QSA]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^shop/category/([a-zA-Z0-9_-]+)/?$ shop/category.php?slug=$1 [L,QSA]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^shop/product/([a-zA-Z0-9_-]+)/?$ shop/product.php?slug=$1 [L,QSA]
+RewriteRule ^shop/search/?$ shop/search.php [L,QSA]
+
 # All other slugs go to page.php for database lookup (exclude known pages)
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteCond %{REQUEST_URI} !^/(index|about|services|projects|blog|team|testimonials|contact|admin|assets|includes|uploads|sql)\.php$ [NC]
+RewriteCond %{REQUEST_URI} !^/(index|about|services|projects|blog|team|testimonials|contact|admin|shop|assets|includes|uploads|sql)\.php$ [NC]
 RewriteRule ^([a-zA-Z0-9_-]+)/?$ page.php?slug=$1 [L,QSA]
 
 ErrorDocument 404 /almatech_site/404.php

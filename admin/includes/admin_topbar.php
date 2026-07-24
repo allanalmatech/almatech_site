@@ -11,7 +11,7 @@ declare(strict_types=1);
   </div>
 
   <div class="d-flex align-items-center gap-2">
-    <a class="btn btn-outline-orange" href="../logout.php" title="Logout">
+    <a class="btn btn-outline-orange" href="<?= ADMIN_URL ?>logout.php" title="Logout">
       <i class="bi bi-box-arrow-right"></i>
     </a>
   </div>

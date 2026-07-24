@@ -74,6 +74,7 @@ $visible_links = setting_get_json($db, 'visible_links', [
   'about' => true,
   'services' => true,
   'projects' => true,
+  'shop' => false,
   'blog' => true,
   'team' => true,
   'testimonials' => true,
@@ -96,6 +97,12 @@ $home = setting_get_json($db, 'home_settings', [
   'hero_cta_link' => 'contact.php',
   'slider_enabled' => true
 ]);
+
+// Analytics settings
+$ga4_property_id      = setting_get($db, 'ga4_property_id', '');
+$ga4_service_json_path = setting_get($db, 'ga4_service_json_path', '');
+$ga4_service_json     = setting_get($db, 'ga4_service_json', '');
+$looker_embed_url     = setting_get($db, 'looker_embed_url', '');
 
 $flash = $_GET['saved'] ?? '';
 ?>
@@ -130,6 +137,11 @@ $flash = $_GET['saved'] ?? '';
             <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-home" type="button" style="white-space: nowrap;">Home Page</button></li>
             <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-about" type="button" style="white-space: nowrap;">About Page</button></li>
             <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-footer" type="button" style="white-space: nowrap;">Footer</button></li>
+            <li class="nav-item">
+              <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-analytics" type="button" style="white-space: nowrap;">
+                Analytics
+              </button>
+            </li>
             <li class="nav-item">
               <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-maint" type="button" style="white-space: nowrap;">
                 Under Construction
@@ -492,6 +504,7 @@ $flash = $_GET['saved'] ?? '';
           'about' => 'About',
           'services' => 'Services',
           'projects' => 'Projects',
+          'shop' => 'Shop Button',
           'blog' => 'Blog',
           'team' => 'Team',
           'testimonials' => 'Testimonials',
@@ -527,7 +540,9 @@ $flash = $_GET['saved'] ?? '';
         }
 
         // Clean order: remove slugs that no longer exist
-        $nav_order = array_values(array_filter($nav_order, fn($s) => isset($nav_items[(string)$s])));
+        $nav_order = array_values(array_filter($nav_order, function ($s) use ($nav_items) {
+          return isset($nav_items[(string)$s]);
+        }));
         ?>
 
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">

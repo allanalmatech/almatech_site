@@ -136,7 +136,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Optional: delete old image file (only if it was inside /uploads/posts/)
             if (!empty($new_cover_image)) {
               $oldPath = ltrim((string)$new_cover_image, '/');
-              if (str_starts_with($oldPath, 'uploads/posts/')) {
+              if (strpos($oldPath, 'uploads/posts/') === 0) {
                 $oldFs = $rootFs . '/' . $oldPath;
                 if (is_file($oldFs)) @unlink($oldFs);
               }

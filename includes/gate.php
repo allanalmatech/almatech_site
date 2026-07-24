@@ -6,7 +6,7 @@ declare(strict_types=1);
  * Check maintenance mode and redirect if enabled
  * This function can be called explicitly or the file will run on include
  */
-function gate_check($db): void {
+function gate_check($db) {
   if (session_status() === PHP_SESSION_NONE) {
     session_start();
   }

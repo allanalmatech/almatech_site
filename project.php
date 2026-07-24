@@ -36,7 +36,7 @@ $project = null;
 
 if ($db instanceof mysqli) {
   $stmt = $db->prepare("
-    SELECT id, title, slug, short_desc, full_desc, category, cover_image, tech_stack, created_at
+    SELECT id, title, slug, short_desc, full_desc, category, cover_image, project_url, tech_stack, created_at
     FROM projects
     WHERE slug = ? AND status = 'completed'
     LIMIT 1
@@ -115,6 +115,15 @@ require_once __DIR__ . '/includes/header.php';
         <?php endif; ?>
 
         <div class="d-flex flex-wrap gap-2">
+          <?php
+          // Use external URL if available, otherwise no "View Project" button
+          $project_url = !empty($project['project_url']) ? (string)$project['project_url'] : null;
+          if ($project_url): ?>
+            <a class="btn btn-orange btn-lg" href="<?= h($project_url) ?>" target="_blank" rel="noopener">
+              <i class="bi bi-box-arrow-up-right me-1"></i> View Project
+            </a>
+          <?php endif; ?>
+
           <a class="btn btn-orange btn-lg" href="contact.php?service=<?= urlencode((string)$project['title']) ?>">
             Request Similar Project <i class="bi bi-arrow-right ms-1"></i>
           </a>
@@ -243,16 +252,16 @@ document.addEventListener('DOMContentLoaded', function() {
     ];
     
     // Show/hide based on screen size
-    elementsToHideOnMobile.forEach(selector => {
+    elementsToHideOnMobile.forEach((selector) => {
       const elements = document.querySelectorAll(selector);
-      elements.forEach(el => {
+      elements.forEach((el) => {
         el.style.display = isMobile ? 'none' : '';
       });
     });
     
-    elementsToHideOnSmallMobile.forEach(selector => {
+    elementsToHideOnSmallMobile.forEach((selector) => {
       const elements = document.querySelectorAll(selector);
-      elements.forEach(el => {
+      elements.forEach((el) => {
         el.style.display = window.innerWidth < 480 ? 'none' : '';
       });
     });
@@ -449,4 +458,5 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 250);
   });
 });
+</script>
 </script>
