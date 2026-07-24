@@ -44,13 +44,13 @@ require_once __DIR__ . '/../../config.php';
         <span>Dashboard</span>
       </a>
 
-      <?php $shopKeys = ['shop_categories', 'shop_products', 'shop_settings']; ?>
+      <?php $shopKeys = ['shop_categories', 'shop_products', 'shop_requests', 'shop_settings', 'shop_ratings']; ?>
       <?php $shopOpen = in_array(($active_admin ?? ''), $shopKeys, true); ?>
       <div class="small text-uppercase text-muted px-3 pt-2 pb-1" style="letter-spacing:.04em; font-size:.68rem;">Shop Management</div>
-      <a class="admin-link d-flex justify-content-between align-items-center <?= $shopOpen ? 'active' : '' ?>" data-bs-toggle="collapse" href="#shopSubmenu" role="button" aria-expanded="<?= $shopOpen ? 'true' : 'false' ?>" aria-controls="shopSubmenu">
+      <button class="admin-link d-flex justify-content-between align-items-center <?= $shopOpen ? 'active' : '' ?> <?= $shopOpen ? '' : 'collapsed' ?>" type="button" data-bs-toggle="collapse" data-bs-target="#shopSubmenu" aria-expanded="<?= $shopOpen ? 'true' : 'false' ?>" aria-controls="shopSubmenu">
         <span><i class="bi bi-cart me-2"></i>Shop</span>
-        <i class="bi <?= $shopOpen ? 'bi-chevron-up' : 'bi-chevron-down' ?> small"></i>
-      </a>
+        <i class="bi shop-toggle-icon <?= $shopOpen ? 'bi-chevron-up' : 'bi-chevron-down' ?> small"></i>
+      </button>
       <div class="collapse <?= $shopOpen ? 'show' : '' ?>" id="shopSubmenu">
         <a class="admin-link ps-5 <?= (($active_admin ?? '') === 'shop_categories') ? 'active' : '' ?>" href="<?= h(ADMIN_URL . 'categories.php') ?>">
           <i class="bi bi-tags"></i>
@@ -60,9 +60,17 @@ require_once __DIR__ . '/../../config.php';
           <i class="bi bi-box-seam"></i>
           <span>Products</span>
         </a>
+        <a class="admin-link ps-5 <?= (($active_admin ?? '') === 'shop_requests') ? 'active' : '' ?>" href="<?= h(ADMIN_URL . 'requests.php') ?>">
+          <i class="bi bi-inboxes"></i>
+          <span>Requests</span>
+        </a>
         <a class="admin-link ps-5 <?= (($active_admin ?? '') === 'shop_settings') ? 'active' : '' ?>" href="<?= h(ADMIN_URL . 'settings.php') ?>">
           <i class="bi bi-sliders"></i>
           <span>Shop Settings</span>
+        </a>
+        <a class="admin-link ps-5 <?= (($active_admin ?? '') === 'shop_ratings') ? 'active' : '' ?>" href="<?= h(ADMIN_URL . 'product_ratings.php') ?>">
+          <i class="bi bi-star-half"></i>
+          <span>Ratings & Views</span>
         </a>
       </div>
 

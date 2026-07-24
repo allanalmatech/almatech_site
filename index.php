@@ -36,9 +36,12 @@ if (!is_array($home)) $home = [];
 
 // Load contact settings for WhatsApp
 $contact_whatsapp = '';
+$recaptcha_site_key = '';
 if ($db instanceof mysqli && function_exists('setting_get')) {
   $contact_whatsapp = setting_get($db, 'contact_whatsapp', '+256755123456');
+  $recaptcha_site_key = trim((string)setting_get($db, 'recaptcha_site_key', ''));
 }
+$quickFormUsesRecaptcha = ($recaptcha_site_key !== '');
 
 // ---------------- Defaults ----------------
 $defaults = [
@@ -170,7 +173,7 @@ if ($db instanceof mysqli) {
         $iconFilePath = __DIR__ . '/uploads/services/' . $iconValue;
         $hasImage = is_file($iconFilePath);
         if ($hasImage) {
-          $imageUrl = BASE_URL . 'uploads/services/' . rawurlencode($iconValue);
+          $imageUrl = rtrim((string)BASE_URL, '/') . '/uploads/services/' . rawurlencode($iconValue);
         }
       }
       
@@ -238,8 +241,37 @@ foreach ($slides as $s) {
     'caption_align' => $align,
   ];
 }
-usort($cleanSlides, function ($a, $b) { return $a['sort_order'] <=> $b['sort_order']; });
+usort($cleanSlides, function ($a, $b) {
+  return $a['sort_order'] <=> $b['sort_order'];
+});
 $slider['slides'] = $cleanSlides;
+
+$statsBackgroundImage = '';
+foreach ($slider['slides'] as $slide) {
+  $imgPath = trim((string)($slide['image'] ?? ''));
+  if ($imgPath === '') {
+    continue;
+  }
+
+  if (preg_match('#^https?://#i', $imgPath)) {
+    $statsBackgroundImage = $imgPath;
+    break;
+  }
+
+  if (strpos($imgPath, 'uploads/') !== 0) {
+    $imgPath = 'uploads/slider/' . ltrim($imgPath, '/');
+  }
+
+  if (is_file(__DIR__ . '/' . $imgPath)) {
+    $statsBackgroundImage = rtrim((string)BASE_URL, '/') . '/' . ltrim($path ?? $imgPath, '/');
+    break;
+  }
+}
+
+$statsSectionClass = 'section section-soft stats-glass-section';
+if ($statsBackgroundImage !== '') {
+  $statsSectionClass .= ' stats-has-bg';
+}
 ?>
 
 <?php if (!empty($slider['enabled']) && !empty($slider['slides'])): ?>
@@ -274,7 +306,7 @@ $slider['slides'] = $cleanSlides;
           }
 
           $fileOk = ($imgPath !== '' && is_file(__DIR__ . '/' . $imgPath));
-          $fullImg = $fileOk ? (BASE_URL . $imgPath) : '';
+          $fullImg = $fileOk ? (rtrim((string)BASE_URL, '/') . '/' . ltrim($imgPath, '/')) : '';
 
           $align = (string)$s['caption_align'];
           $alignClass = $align === 'center' ? 'text-center' : ($align === 'right' ? 'text-end' : 'text-start');
@@ -460,6 +492,19 @@ $slider['slides'] = $cleanSlides;
                 </select>
               </div>
 
+              <?php if ($quickFormUsesRecaptcha): ?>
+                <div class="col-12">
+                  <label class="form-label">Human Verification</label>
+                  <div class="small text-muted">Protected by Google reCAPTCHA.</div>
+                </div>
+              <?php else: ?>
+                <div class="col-12">
+                  <label class="form-label">Human Verification</label>
+                  <input type="text" class="form-control" id="qrCaptcha" placeholder="Solve the math question" required>
+                  <div class="form-text" id="qrCaptchaQuestion"></div>
+                </div>
+              <?php endif; ?>
+
               <div class="col-12">
                 <button type="submit" class="btn btn-success w-100">
                   <i class="bi bi-whatsapp me-2"></i> Send via WhatsApp
@@ -483,6 +528,26 @@ $slider['slides'] = $cleanSlides;
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   const form = document.getElementById('quickRequestForm');
+  const captchaInput = document.getElementById('qrCaptcha');
+  const captchaQuestion = document.getElementById('qrCaptchaQuestion');
+  const useRecaptcha = <?= $quickFormUsesRecaptcha ? 'true' : 'false' ?>;
+  const recaptchaVerifyUrl = '<?= h(rtrim((string)BASE_URL, '/') . '/recaptcha-verify.php') ?>';
+  let qrCaptchaAnswer = null;
+
+  function resetQuickRequestCaptcha() {
+    const a = Math.floor(Math.random() * 8) + 2;
+    const b = Math.floor(Math.random() * 8) + 1;
+    qrCaptchaAnswer = a + b;
+    if (captchaQuestion) {
+      captchaQuestion.textContent = 'Solve: ' + a + ' + ' + b;
+    }
+    if (captchaInput) {
+      captchaInput.value = '';
+    }
+  }
+
+  resetQuickRequestCaptcha();
+
   if (form) {
     form.addEventListener('submit', function(e) {
       e.preventDefault();
@@ -495,8 +560,54 @@ document.addEventListener('DOMContentLoaded', function() {
         alert('Please fill in all fields');
         return;
       }
-      
-      // Use WhatsApp number from database settings
+
+      if (useRecaptcha) {
+        if (!window.grecaptcha || typeof window.grecaptcha.execute !== 'function' || !window.RECAPTCHA_SITE_KEY) {
+          alert('reCAPTCHA is not ready. Please refresh and try again.');
+          return;
+        }
+
+        window.grecaptcha.ready(async function () {
+          try {
+            const token = await window.grecaptcha.execute(window.RECAPTCHA_SITE_KEY, { action: 'quick_request' });
+            fetch(recaptchaVerifyUrl, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+              },
+              body: new URLSearchParams({ token: token, action: 'quick_request' })
+            })
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+              if (!data || !data.success) {
+                alert('reCAPTCHA check failed. Please try again.');
+                return;
+              }
+              openWhatsApp(name, phone, service);
+            })
+            .catch(function() {
+              alert('Could not verify reCAPTCHA. Check your connection and retry.');
+            });
+          } catch (error) {
+            alert('reCAPTCHA check failed. Please try again.');
+          }
+        });
+        return;
+      }
+
+      const captchaValue = parseInt((captchaInput ? captchaInput.value : '').trim(), 10);
+      if (!captchaInput || Number.isNaN(captchaValue) || captchaValue !== qrCaptchaAnswer) {
+        alert('Captcha check failed. Please solve the math question.');
+        resetQuickRequestCaptcha();
+        return;
+      }
+      openWhatsApp(name, phone, service);
+      resetQuickRequestCaptcha();
+    });
+  }
+
+  function openWhatsApp(name, phone, service) {
+    // Use WhatsApp number from database settings
       const businessPhone = '<?= h((string)($contact_whatsapp ?? '+256755123456')) ?>';
       
       // Create message
@@ -514,7 +625,6 @@ document.addEventListener('DOMContentLoaded', function() {
       
       // Open WhatsApp
       window.open(whatsappUrl, '_blank');
-    });
   }
 });
 </script>
@@ -569,14 +679,40 @@ document.addEventListener('DOMContentLoaded', function() {
 </section>
 
 <!-- Stats -->
-<section class="section section-soft">
+<section class="<?= h($statsSectionClass) ?>"<?= $statsBackgroundImage !== '' ? ' style="--stats-bg-image:url(\'' . h($statsBackgroundImage) . '\');"' : '' ?>>
   <div class="container">
     <div class="row g-4">
       <?php foreach ($stats as $st): if (!is_array($st)) continue; ?>
+        <?php
+          $statLabel = trim((string)($st['label'] ?? ''));
+          $labelLower = strtolower($statLabel);
+          $defaultIcon = 'bi-graph-up-arrow';
+          if (strpos($labelLower, 'client') !== false) {
+            $defaultIcon = 'bi-people-fill';
+          } elseif (strpos($labelLower, 'project') !== false) {
+            $defaultIcon = 'bi-briefcase-fill';
+          } elseif (strpos($labelLower, 'support') !== false) {
+            $defaultIcon = 'bi-headset';
+          } elseif (strpos($labelLower, 'year') !== false || strpos($labelLower, 'experience') !== false) {
+            $defaultIcon = 'bi-award-fill';
+          }
+
+          $rawIcon = trim((string)($st['icon'] ?? $defaultIcon));
+          if ($rawIcon === '') {
+            $rawIcon = $defaultIcon;
+          }
+          if (strpos($rawIcon, 'bi ') === 0) {
+            $iconClass = $rawIcon;
+          } elseif (strpos($rawIcon, 'bi-') === 0) {
+            $iconClass = 'bi ' . $rawIcon;
+          } else {
+            $iconClass = 'bi ' . $defaultIcon;
+          }
+        ?>
         <div class="col-6 col-lg-3">
           <div class="stat-card text-center">
             <div class="stat-icon mb-3">
-              <i class="<?= h((string)($st['icon'] ?? 'bi-star-fill')) ?>"></i>
+              <i class="<?= h($iconClass) ?>"></i>
             </div>
             <div class="stat-num" data-stat-counter data-count="<?= h((string)($st['value'] ?? '0')) ?>" data-duration="2500">
               <?= h((string)($st['value'] ?? '0')) ?>

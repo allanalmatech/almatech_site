@@ -12,6 +12,7 @@ require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../includes/functions.php';
 
 $q = trim((string)($_GET['q'] ?? ''));
+$hasSearch = $q !== '';
 $sort = $_GET['sort'] ?? 'newest';
 $page = max(1, (int)($_GET['page'] ?? 1));
 $perPage = max(1, (int)setting('products_per_page', '15'));
@@ -31,7 +32,7 @@ if (!$showOutOfStock) {
     $where[] = '(p.stock_qty IS NULL OR p.stock_qty > 0)';
 }
 
-if ($q !== '') {
+if ($hasSearch) {
     $where[] = '(p.name LIKE :q_name OR p.short_description LIKE :q_short OR p.description LIKE :q_desc)';
     $qLike = '%' . $q . '%';
     $params[':q_name'] = $qLike;
@@ -41,25 +42,34 @@ if ($q !== '') {
 
 $whereSql = implode(' AND ', $where);
 
-$countStmt = db()->prepare("SELECT COUNT(*) FROM products p INNER JOIN categories c ON c.id = p.category_id WHERE {$whereSql}");
-$countStmt->execute($params);
-$total = (int)$countStmt->fetchColumn();
-$pagination = pagination_meta($total, $page, $perPage);
+$products = [];
+$pagination = ['current_page' => 1, 'total_pages' => 0];
 
-$stmt = db()->prepare("SELECT p.*, c.name AS category_name FROM products p INNER JOIN categories c ON c.id = p.category_id WHERE {$whereSql} ORDER BY {$sortSql} LIMIT :limit OFFSET :offset");
-foreach ($params as $key => $value) {
-    $stmt->bindValue($key, $value);
+if ($hasSearch) {
+    $countStmt = db()->prepare("SELECT COUNT(*) FROM products p INNER JOIN categories c ON c.id = p.category_id WHERE {$whereSql}");
+    $countStmt->execute($params);
+    $total = (int)$countStmt->fetchColumn();
+    $pagination = pagination_meta($total, $page, $perPage);
+
+    $stmt = db()->prepare("SELECT p.*, c.name AS category_name FROM products p INNER JOIN categories c ON c.id = p.category_id WHERE {$whereSql} ORDER BY {$sortSql} LIMIT :limit OFFSET :offset");
+    foreach ($params as $key => $value) {
+        $stmt->bindValue($key, $value);
+    }
+    $stmt->bindValue(':limit', $pagination['per_page'], PDO::PARAM_INT);
+    $stmt->bindValue(':offset', $pagination['offset'], PDO::PARAM_INT);
+    $stmt->execute();
+    $products = $stmt->fetchAll();
 }
-$stmt->bindValue(':limit', $pagination['per_page'], PDO::PARAM_INT);
-$stmt->bindValue(':offset', $pagination['offset'], PDO::PARAM_INT);
-$stmt->execute();
-$products = $stmt->fetchAll();
 
 $BASE = rtrim((string)BASE_URL, '/');
+$scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+$host = $_SERVER['HTTP_HOST'] ?? 'www.almatechconsults.com';
+$ORIGIN = $scheme . '://' . $host;
+$searchHeroCover = shop_hero_cover_url(setting('search_hero_cover', ''));
 require_once __DIR__ . '/../includes/header.php';
 ?>
 
-<section class="hero">
+<section class="hero<?= $searchHeroCover ? ' shop-hero-cover hero-scroll-blur' : '' ?>"<?= $searchHeroCover ? ' style="--shop-hero-cover:url(\'' . h($searchHeroCover) . '\');"' : '' ?>>
   <div class="container py-5">
     <div class="badge-soft mb-3"><i class="bi bi-search me-1"></i> Search Catalog</div>
     <h1 class="display-6 fw-bold mb-2">Find products quickly</h1>
@@ -81,11 +91,19 @@ require_once __DIR__ . '/../includes/header.php';
           <option value="price_desc" <?= $sort === 'price_desc' ? 'selected' : '' ?>>Price high to low</option>
         </select>
       </div>
-      <div class="col-md-3 d-grid"><button class="btn btn-orange" type="submit">Search</button></div>
+      <div class="col-md-2 d-grid"><button class="btn btn-orange" type="submit">Search</button></div>
+      <div class="col-md-1 d-grid"><a class="btn btn-outline-orange" href="<?= h($BASE) ?>/shop/request" title="Request a Gadget"><i class="bi bi-plus-circle"></i></a></div>
     </form>
 
     <div class="row g-3 g-lg-4">
-      <?php if (!$products): ?>
+      <?php if (!$hasSearch): ?>
+        <div class="col-12">
+          <div class="service-card p-4 text-center">
+            <h2 class="h5 mb-2">Start by searching</h2>
+            <p class="text-muted mb-0">Type keywords above to search for products and see matching results.</p>
+          </div>
+        </div>
+      <?php elseif (!$products): ?>
         <div class="col-12">
           <div class="service-card p-4 text-center">
             <h2 class="h5 mb-2">No products matched your search</h2>
@@ -108,9 +126,10 @@ require_once __DIR__ . '/../includes/header.php';
                 <div class="fw-semibold"><?= h(format_currency((float)$product['price'])) ?></div>
                 <?php if (!empty($product['discount_price'])): ?><div class="small text-success">Sale: <?= h(format_currency((float)$product['discount_price'])) ?></div><?php endif; ?>
               </div>
-              <div class="d-grid gap-2 mt-auto">
-                <a href="<?= h($BASE) ?>/shop/product/<?= rawurlencode((string)$product['slug']) ?>" class="btn btn-outline-orange"><i class="bi bi-eye me-1"></i>View Product</a>
-                <button type="button" class="btn btn-orange" data-wa-order data-wa-number="<?= h(whatsapp_number()) ?>" data-product-name="<?= h((string)$product['name']) ?>" data-price-label="<?= h(format_currency((float)$product['price'])) ?>" data-discount-label="<?= !empty($product['discount_price']) ? h(format_currency((float)$product['discount_price'])) : '' ?>" data-product-link="<?= h($BASE) ?>/shop/product/<?= rawurlencode((string)$product['slug']) ?>"><i class="bi bi-whatsapp me-1"></i>Place Order</button>
+              <div class="d-flex gap-2 mt-auto">
+                <a href="<?= h($BASE) ?>/shop/product/<?= rawurlencode((string)$product['slug']) ?>" class="btn btn-outline-orange flex-fill"><i class="bi bi-eye me-1"></i>View</a>
+                <button type="button" class="btn btn-whatsapp flex-fill" data-wa-order data-wa-number="<?= h((string)whatsapp_number()) ?>" data-product-name="<?= h((string)($product['name'] ?? 'Product')) ?>" data-price-label="<?= h(format_currency((float)($product['price'] ?? 0))) ?>" data-discount-label="<?= h(!empty($product['discount_price']) ? format_currency((float)$product['discount_price']) : '') ?>" data-product-link="<?= h($ORIGIN . $BASE . '/shop/product/' . rawurlencode((string)($product['slug'] ?? ''))) ?>"><i class="bi bi-whatsapp me-1"></i>Order</button>
+                <button type="button" class="btn btn-share-icon" data-product-share data-share-title="<?= h((string)$product['name']) ?>" data-share-text="<?= h('Check out this product from Alma Tech Consults: ' . (string)$product['name']) ?>" data-share-url="<?= h($ORIGIN . $BASE . '/shop/product/' . rawurlencode((string)($product['slug'] ?? ''))) ?>" data-share-image="<?= h(product_image_url((string)$product['main_image'])) ?>" aria-label="Share <?= h((string)$product['name']) ?>" title="Share product"><i class="bi bi-share-fill"></i></button>
               </div>
             </div>
           </div>
@@ -118,7 +137,7 @@ require_once __DIR__ . '/../includes/header.php';
       <?php endforeach; ?>
     </div>
 
-    <?php if ($pagination['total_pages'] > 1): ?>
+    <?php if ($hasSearch && $pagination['total_pages'] > 1): ?>
       <nav class="mt-4">
         <ul class="pagination mb-0">
           <li class="page-item <?= $pagination['current_page'] <= 1 ? 'disabled' : '' ?>"><a class="page-link" href="<?= h('?' . http_build_query(['q' => $q, 'sort' => $sort, 'page' => $pagination['current_page'] - 1])) ?>">Previous</a></li>

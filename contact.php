@@ -21,6 +21,18 @@ $csrf = $_SESSION['csrf_token'];
 
 $db = $GLOBALS['db'] ?? $mysqli ?? null;
 
+$contactHeroCover = '';
+$contactHeroTextClass = 'text-muted';
+if ($db instanceof mysqli && function_exists('setting_get')) {
+  $contactCover = trim((string)setting_get($db, 'contact_cover_image', ''));
+  if ($contactCover !== '') {
+    $contactHeroCover = (strpos($contactCover, 'http') === 0)
+      ? $contactCover
+      : rtrim((string)BASE_URL, '/') . '/' . ltrim($contactCover, '/');
+    $contactHeroTextClass = '';
+  }
+}
+
 // -------------------- Load services from database --------------------  
 $services = [];
 if ($db instanceof mysqli) {
@@ -43,6 +55,9 @@ $contact_email    = 'info@almatechconsults.com';
 $contact_phone    = '+256 XXX XXX XXX';
 $wa_number        = '256XXXXXXXXX'; // no '+'
 $map_embed        = ''; // Will load from database
+$recaptcha_site_key = '';
+$recaptcha_secret_key = '';
+$math_fallback_enabled = false;
 
 if ($db instanceof mysqli) {
   // Load contact-specific settings
@@ -52,6 +67,9 @@ if ($db instanceof mysqli) {
     'contact_phone',
     'contact_whatsapp',
     'contact_map_embed',
+    'recaptcha_site_key',
+    'recaptcha_secret_key',
+    'recaptcha_fallback_math_enabled',
   ];
 
   $placeholders = implode(',', array_fill(0, count($keys), '?'));
@@ -73,8 +91,13 @@ if ($db instanceof mysqli) {
     if (!empty($kv['contact_phone']))    $contact_phone    = $kv['contact_phone'];
     if (!empty($kv['contact_whatsapp'])) $wa_number        = $kv['contact_whatsapp'];
     if (isset($kv['contact_map_embed'])) $map_embed        = $kv['contact_map_embed'];
+    if (isset($kv['recaptcha_site_key'])) $recaptcha_site_key = trim((string)$kv['recaptcha_site_key']);
+    if (isset($kv['recaptcha_secret_key'])) $recaptcha_secret_key = trim((string)$kv['recaptcha_secret_key']);
+    $math_fallback_enabled = isset($kv['recaptcha_fallback_math_enabled']) && (string)$kv['recaptcha_fallback_math_enabled'] === '1';
   }
 }
+
+$useRecaptcha = ($recaptcha_site_key !== '');
 
 // -------------------- Form values --------------------
 $errors = [];
@@ -88,10 +111,15 @@ $subject = trim((string)($_POST['subject'] ?? ''));
 $message = trim((string)($_POST['message'] ?? ''));
 
 // WhatsApp link (prefilled)
-$wa_text = "Hello Alma Tech Consults. I need help with: " . ($service ?: "a service") .
-           ". My name is " . ($name ?: "___") .
-           ". Phone: " . ($phone ?: "___") . ".";
-$wa_link = "https://wa.me/" . preg_replace('/\D+/', '', $wa_number) . "?text=" . urlencode($wa_text);
+$wa_number_digits = preg_replace('/\D+/', '', $wa_number);
+$wa_text = "Hello Alma Tech Consults.%0A%0A" .
+           "Name: " . rawurlencode($name ?: '___') . "%0A" .
+           "Phone: " . rawurlencode($phone ?: '___') . "%0A" .
+           "Email: " . rawurlencode($email ?: 'Not provided') . "%0A" .
+           "Service: " . rawurlencode($service ?: 'Not selected') . "%0A" .
+           "Subject: " . rawurlencode($subject ?: 'Not provided') . "%0A%0A" .
+           "Message:%0A" . rawurlencode($message ?: 'I need help with your services.');
+$wa_link = "https://wa.me/" . $wa_number_digits . "?text=" . $wa_text;
 
 // -------------------- Handle POST --------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -100,6 +128,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $posted_csrf = (string)($_POST['csrf_token'] ?? '');
   if (!$posted_csrf || !hash_equals($csrf, $posted_csrf)) {
     $errors[] = "Security check failed. Refresh and try again.";
+  }
+
+  if ($useRecaptcha) {
+    $captchaToken = (string)($_POST['recaptcha_token'] ?? ($_POST['g-recaptcha-response'] ?? ''));
+    $remoteIp = (string)($_SERVER['REMOTE_ADDR'] ?? '');
+    $recaptchaOk = recaptcha_verify_token($recaptcha_secret_key, $captchaToken, $remoteIp, 'contact_submit', 0.3);
+    if (!$recaptchaOk) {
+      if ($math_fallback_enabled) {
+        $captchaFallbackOk = captcha_validate_submission('contact_form', (string)($_POST['captcha_token'] ?? ''), (string)($_POST['captcha_answer'] ?? ''));
+        if (!$captchaFallbackOk) {
+          $errors[] = "Security verification failed. Please solve the captcha and try again.";
+        }
+      } else {
+        $errors[] = "reCAPTCHA check failed. Please refresh and try again.";
+      }
+    }
+  } else {
+    if (!captcha_validate_submission('contact_form', (string)($_POST['captcha_token'] ?? ''), (string)($_POST['captcha_answer'] ?? ''))) {
+      $errors[] = "Captcha check failed. Please try again.";
+    }
   }
 
   // Validate
@@ -148,7 +196,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 ?>
 
 <!-- Page Hero -->
-<section class="hero">
+<section class="hero<?= $contactHeroCover !== '' ? ' hero-cover-blur hero-scroll-blur' : '' ?>"<?= $contactHeroCover !== '' ? ' style="--hero-cover-image:url(\'' . h($contactHeroCover) . '\');"' : '' ?>>
   <div class="container py-5">
     <div class="row g-4 align-items-center">
       <div class="col-lg-7">
@@ -157,7 +205,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
 
         <h1 class="display-6 fw-bold mb-3">Let’s talk about your project.</h1>
-        <p class="lead text-muted mb-0">
+        <p class="lead <?= $contactHeroTextClass ?> mb-0">
           Send a message and we’ll respond quickly. You can also reach us on WhatsApp for fast support.
         </p>
       </div>
@@ -170,9 +218,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="mb-2"><i class="bi bi-envelope me-1 text-orange"></i><?= h($contact_email) ?></div>
             <div class="mb-3"><i class="bi bi-telephone me-1 text-orange"></i><?= h($contact_phone) ?></div>
 
-            <a class="btn btn-orange w-100" href="<?= h($wa_link) ?>" target="_blank" rel="noopener">
-              <i class="bi bi-whatsapp me-1"></i> Chat on WhatsApp
-            </a>
           </div>
         </div>
       </div>
@@ -204,8 +249,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
           <?php endif; ?>
 
-          <form method="post" class="row g-3" novalidate>
+          <form method="post" class="row g-3" novalidate data-recaptcha-v3="1" data-recaptcha-action="contact_submit">
             <input type="hidden" name="csrf_token" value="<?= h($csrf) ?>">
+            <input type="hidden" name="recaptcha_token" value="">
 
             <div class="col-md-6">
               <label class="form-label">Your Name *</label>
@@ -250,12 +296,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               <div class="form-text">Include your budget range and timeline if you can.</div>
             </div>
 
+            <?php if ($useRecaptcha): ?>
+              <div class="col-12">
+                <label class="form-label">Human Verification *</label>
+                <div class="small text-muted">Protected by Google reCAPTCHA.</div>
+              </div>
+              <?php if ($math_fallback_enabled): ?>
+                <?= captcha_render('contact_form', 'Fallback Captcha (if reCAPTCHA fails)', false) ?>
+              <?php endif; ?>
+            <?php else: ?>
+              <?= captcha_render('contact_form', 'Human Verification') ?>
+            <?php endif; ?>
+
             <div class="col-12 d-flex flex-wrap gap-2">
               <button class="btn btn-orange btn-lg" type="submit">
                 Send Message <i class="bi bi-send ms-1"></i>
               </button>
 
-              <a class="btn btn-outline-orange btn-lg" href="<?= h($wa_link) ?>" target="_blank" rel="noopener">
+              <a class="btn btn-whatsapp btn-lg" href="<?= h($wa_link) ?>" target="_blank" rel="noopener" data-wa-compose data-wa-number="<?= h($wa_number_digits) ?>">
                 WhatsApp Instead <i class="bi bi-arrow-right ms-1"></i>
               </a>
             </div>
@@ -316,17 +374,106 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           </div>
         </div>
 
-        <div class="cta p-4">
-          <div class="fw-semibold mb-2">Need urgent support?</div>
-          <div class="small text-muted mb-3">WhatsApp us with your request and we’ll reply as soon as possible.</div>
-          <a class="btn btn-orange w-100 btn-lg" href="<?= h($wa_link) ?>" target="_blank" rel="noopener">
-            <i class="bi bi-whatsapp me-1"></i> WhatsApp Now
-          </a>
-        </div>
       </div>
 
     </div>
   </div>
 </section>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var recaptchaForm = document.querySelector('form[data-recaptcha-v3]');
+  if (recaptchaForm && window.RECAPTCHA_SITE_KEY) {
+    var allowMathFallback = <?= $math_fallback_enabled ? 'true' : 'false' ?>;
+    recaptchaForm.addEventListener('submit', function (event) {
+      if (recaptchaForm.dataset.recaptchaDone === '1') {
+        recaptchaForm.dataset.recaptchaDone = '0';
+        return;
+      }
+
+      event.preventDefault();
+      var tokenInput = recaptchaForm.querySelector('input[name="recaptcha_token"]');
+      var action = recaptchaForm.getAttribute('data-recaptcha-action') || 'submit';
+      var fallbackInput = recaptchaForm.querySelector('input[name="captcha_answer"]');
+
+      if (!window.grecaptcha || typeof window.grecaptcha.execute !== 'function') {
+        if (allowMathFallback && fallbackInput && String(fallbackInput.value || '').trim() !== '') {
+          if (tokenInput) {
+            tokenInput.value = '';
+          }
+          recaptchaForm.dataset.recaptchaDone = '1';
+          recaptchaForm.submit();
+          return;
+        }
+        alert(allowMathFallback ? 'reCAPTCHA is still loading. Please wait a moment or solve fallback captcha, then submit again.' : 'reCAPTCHA is still loading. Please wait a moment and submit again.');
+        return;
+      }
+
+      window.grecaptcha.ready(async function () {
+        try {
+          var token = await window.grecaptcha.execute(window.RECAPTCHA_SITE_KEY, { action: action });
+          if (tokenInput) {
+            tokenInput.value = token;
+          }
+          recaptchaForm.dataset.recaptchaDone = '1';
+          recaptchaForm.submit();
+        } catch (error) {
+          if (tokenInput) {
+            tokenInput.value = '';
+          }
+          if (allowMathFallback && fallbackInput && String(fallbackInput.value || '').trim() === '') {
+            alert('reCAPTCHA is unavailable. Please solve the fallback captcha field, then submit again.');
+            return;
+          }
+          if (!allowMathFallback) {
+            alert('reCAPTCHA check failed. Please refresh and try again.');
+            return;
+          }
+          recaptchaForm.dataset.recaptchaDone = '1';
+          recaptchaForm.submit();
+        }
+      });
+    });
+  }
+
+  var waBtn = document.querySelector('[data-wa-compose]');
+  var form = document.querySelector('form[novalidate]');
+  if (!waBtn || !form) return;
+
+  function readField(name) {
+    var el = form.querySelector('[name="' + name + '"]');
+    return el ? String(el.value || '').trim() : '';
+  }
+
+  function buildMessage() {
+    var name = readField('name') || '___';
+    var phone = readField('phone') || '___';
+    var email = readField('email') || 'Not provided';
+    var service = readField('service') || 'Not selected';
+    var subject = readField('subject') || 'Not provided';
+    var message = readField('message') || 'I need help with your services.';
+
+    return [
+      'Hello Alma Tech Consults.',
+      '',
+      'Name: ' + name,
+      'Phone: ' + phone,
+      'Email: ' + email,
+      'Service: ' + service,
+      'Subject: ' + subject,
+      '',
+      'Message:',
+      message
+    ].join('\n');
+  }
+
+  waBtn.addEventListener('click', function (event) {
+    event.preventDefault();
+    var number = waBtn.getAttribute('data-wa-number') || '';
+    var url = 'https://wa.me/' + encodeURIComponent(number) + '?text=' + encodeURIComponent(buildMessage());
+    window.open(url, '_blank', 'noopener');
+  });
+});
+</script>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

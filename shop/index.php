@@ -26,11 +26,15 @@ $featuredSql .= ' ORDER BY p.created_at DESC LIMIT 12';
 
 $products = db()->query($featuredSql)->fetchAll();
 $BASE = rtrim((string)BASE_URL, '/');
+$scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+$host = $_SERVER['HTTP_HOST'] ?? 'www.almatechconsults.com';
+$ORIGIN = $scheme . '://' . $host;
+$shopHeroCover = shop_hero_cover_url(setting('shop_hero_cover', ''));
 
 require_once __DIR__ . '/../includes/header.php';
 ?>
 
-<section class="hero">
+<section class="hero<?= $shopHeroCover ? ' shop-hero-cover hero-scroll-blur' : '' ?>"<?= $shopHeroCover ? ' style="--shop-hero-cover:url(\'' . h($shopHeroCover) . '\');"' : '' ?>>
   <div class="container py-5">
     <div class="row g-4 align-items-center">
       <div class="col-lg-8">
@@ -38,25 +42,26 @@ require_once __DIR__ . '/../includes/header.php';
         <h1 class="display-6 fw-bold mb-3">Discover products and order on WhatsApp.</h1>
         <p class="lead text-muted mb-0">Browse featured items by category and send your order instantly.</p>
       </div>
-      <div class="col-lg-4">
+      <div class="col-lg-4 shop-hero-glass-col d-none d-lg-block">
         <div class="hero-card p-4">
-          <div class="fw-semibold mb-2">Need help choosing?</div>
+          <div class="fw-semibold mb-2 text-orange">Need help choosing?</div>
           <p class="text-muted small mb-3">Message our team and we will guide you to the right product.</p>
-          <a href="<?= h($BASE) ?>/shop/search" class="btn btn-orange w-100 btn-lg">Search Products</a>
+          <a href="<?= h($BASE) ?>/shop/search" class="btn btn-orange w-100 btn-lg shop-search-glass-btn"><i class="bi bi-search me-1"></i>Search Products</a>
         </div>
       </div>
     </div>
   </div>
 </section>
 
-<section class="section">
-  <div class="container">
+<section class="section shop-page-section">
+  <div class="container shop-page-container">
     <div class="d-flex flex-wrap gap-2 mb-4">
       <a class="btn btn-filter" href="<?= h($BASE) ?>/shop/">All</a>
       <?php foreach ($categories as $category): ?>
         <a class="btn btn-filter" href="<?= h($BASE) ?>/shop/category/<?= rawurlencode((string)$category['slug']) ?>"><?= h((string)$category['name']) ?></a>
       <?php endforeach; ?>
       <a class="btn btn-outline-orange" href="<?= h($BASE) ?>/shop/search">Advanced Search</a>
+      <a class="btn btn-orange" href="<?= h($BASE) ?>/shop/request"><i class="bi bi-plus-circle me-1"></i>Request a Gadget</a>
     </div>
 
     <div class="row g-3 g-lg-4">
@@ -73,7 +78,7 @@ require_once __DIR__ . '/../includes/header.php';
         <div class="col-md-6 col-lg-4">
           <div class="project-card h-100 d-flex flex-column">
             <div class="project-cover">
-              <img src="<?= h(product_image_url((string)$product['main_image'])) ?>" alt="<?= h((string)$product['name']) ?>">
+              <img src="<?= h(product_image_url((string)$product['main_image'])) ?>" alt="<?= h((string)$product['name']) ?>" loading="lazy" decoding="async">
               <span class="project-badge"><?= h((string)$product['category_name']) ?></span>
             </div>
 
@@ -88,18 +93,29 @@ require_once __DIR__ . '/../includes/header.php';
                 <?php endif; ?>
               </div>
 
-              <div class="d-grid gap-2 mt-auto">
-                <a class="btn btn-outline-orange" href="<?= h($BASE) ?>/shop/product/<?= rawurlencode((string)$product['slug']) ?>"><i class="bi bi-eye me-1"></i>View Product</a>
+              <div class="d-flex gap-2 mt-auto">
+                <a class="btn btn-outline-orange flex-fill" href="<?= h($BASE) ?>/shop/product/<?= rawurlencode((string)$product['slug']) ?>"><i class="bi bi-eye me-1"></i>View</a>
                 <button
                   type="button"
-                  class="btn btn-orange"
+                  class="btn btn-whatsapp flex-fill"
                   data-wa-order
                   data-wa-number="<?= h(whatsapp_number()) ?>"
                   data-product-name="<?= h((string)$product['name']) ?>"
                   data-price-label="<?= h(format_currency((float)$product['price'])) ?>"
                   data-discount-label="<?= !empty($product['discount_price']) ? h(format_currency((float)$product['discount_price'])) : '' ?>"
-                  data-product-link="<?= h($BASE) ?>/shop/product/<?= rawurlencode((string)$product['slug']) ?>"
-                ><i class="bi bi-whatsapp me-1"></i>Place Order</button>
+                  data-product-link="<?= h($ORIGIN . $BASE . '/shop/product/' . rawurlencode((string)($product['slug'] ?? ''))) ?>"
+                ><i class="bi bi-whatsapp me-1"></i>Order</button>
+                <button
+                  type="button"
+                  class="btn btn-share-icon"
+                  data-product-share
+                  data-share-title="<?= h((string)$product['name']) ?>"
+                  data-share-text="<?= h('Check out this product from Alma Tech Consults: ' . (string)$product['name']) ?>"
+                  data-share-url="<?= h($ORIGIN . $BASE . '/shop/product/' . rawurlencode((string)($product['slug'] ?? ''))) ?>"
+                  data-share-image="<?= h(product_image_url((string)$product['main_image'])) ?>"
+                  aria-label="Share <?= h((string)$product['name']) ?>"
+                  title="Share product"
+                ><i class="bi bi-share-fill"></i></button>
               </div>
             </div>
           </div>

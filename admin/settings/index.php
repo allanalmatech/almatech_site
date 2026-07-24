@@ -40,6 +40,9 @@ $email          = setting_get($db, 'contact_email', '');
 $phone          = setting_get($db, 'contact_phone', '');
 $whatsapp       = setting_get($db, 'contact_whatsapp', '');
 $map_embed      = setting_get($db, 'contact_map_embed', '');
+$recaptcha_site_key = setting_get($db, 'recaptcha_site_key', '');
+$recaptcha_secret_key = setting_get($db, 'recaptcha_secret_key', '');
+$recaptcha_fallback_math_enabled = setting_get($db, 'recaptcha_fallback_math_enabled', '0');
 
 $brand_logo     = setting_get($db, 'brand_logo', '');
 $favicon        = setting_get($db, 'brand_favicon', '');
@@ -48,6 +51,12 @@ $secondary_color= setting_get($db, 'brand_secondary_color', '#0b1220');
 $accent_color   = setting_get($db, 'brand_accent_color', '#f3f4f6');
 
 $footer_note    = setting_get($db, 'footer_note', '');
+
+$about_cover_image    = setting_get($db, 'about_cover_image', '');
+$services_cover_image = setting_get($db, 'services_cover_image', '');
+$projects_cover_image = setting_get($db, 'projects_cover_image', '');
+$blog_cover_image     = setting_get($db, 'blog_cover_image', '');
+$contact_cover_image  = setting_get($db, 'contact_cover_image', '');
 
 $under_construction = setting_get($db, 'under_construction', '0');
 
@@ -136,6 +145,7 @@ $flash = $_GET['saved'] ?? '';
             <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-links" type="button" style="white-space: nowrap;">Visible Links</button></li>
             <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-home" type="button" style="white-space: nowrap;">Home Page</button></li>
             <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-about" type="button" style="white-space: nowrap;">About Page</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-page-covers" type="button" style="white-space: nowrap;">Page Covers</button></li>
             <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-footer" type="button" style="white-space: nowrap;">Footer</button></li>
             <li class="nav-item">
               <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-analytics" type="button" style="white-space: nowrap;">
@@ -218,6 +228,31 @@ $flash = $_GET['saved'] ?? '';
           <div class="col-12">
             <label class="form-label">Google Map Embed URL (iframe src)</label>
             <input class="form-control" name="contact_map_embed" value="<?= h($map_embed) ?>">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Google reCAPTCHA Site Key</label>
+            <input class="form-control" name="recaptcha_site_key" value="<?= h($recaptcha_site_key) ?>" placeholder="6Lc...">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Google reCAPTCHA Secret Key</label>
+            <input class="form-control" name="recaptcha_secret_key" value="<?= h($recaptcha_secret_key) ?>" placeholder="6Lc...">
+            <div class="form-text">Used on public forms to block automated spam.</div>
+          </div>
+          <div class="col-12">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="recaptcha_fallback_math_enabled" id="recaptchaFallbackMath" value="1" <?= $recaptcha_fallback_math_enabled === '1' ? 'checked' : '' ?>>
+              <label class="form-check-label" for="recaptchaFallbackMath">Enable fallback math captcha when reCAPTCHA fails</label>
+            </div>
+            <div class="form-text">If disabled, forms will rely only on Google reCAPTCHA and block submission when token verification fails.</div>
+          </div>
+          <div class="col-12">
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+              <button type="button" class="btn btn-sm btn-outline-primary" id="testRecaptchaBtn">
+                <i class="bi bi-shield-check me-1"></i>Test reCAPTCHA v2/v3
+              </button>
+              <div class="small text-muted">Runs a live token + siteverify test using your Site Key + Secret Key.</div>
+            </div>
+            <div id="recaptchaTestResult" class="small mt-2"></div>
           </div>
         </div>
       </div>
@@ -849,6 +884,80 @@ if ($tRes) $tpls = $tRes->fetch_all(MYSQLI_ASSOC);
 
 
       <!-- Footer -->
+      <div class="tab-pane fade" id="tab-page-covers">
+        <div class="row g-3">
+          <div class="col-12">
+            <h6 class="mb-1">Hero Cover Images</h6>
+            <div class="text-muted small">Recommended dimensions: <strong>1600 x 560 px</strong> (JPG, PNG, WEBP up to 4MB).</div>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label">About Page Cover</label>
+            <input class="form-control" type="file" name="about_cover_image_file" accept="image/jpeg,image/png,image/webp">
+            <?php if (!empty($about_cover_image)): ?>
+              <?php $about_cover_preview = (strpos($about_cover_image, 'http') === 0) ? $about_cover_image : (rtrim((string)BASE_URL, '/') . '/' . ltrim((string)$about_cover_image, '/')); ?>
+              <div class="mt-2"><img src="<?= h($about_cover_preview) ?>" alt="About cover" style="max-width: 280px; width: 100%; border-radius: 10px; border: 1px solid #e2e8f0;"></div>
+              <div class="form-check mt-2">
+                <input class="form-check-input" type="checkbox" name="remove_about_cover_image" id="removeAboutCover">
+                <label class="form-check-label" for="removeAboutCover">Remove current About cover</label>
+              </div>
+            <?php endif; ?>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label">Services Page Cover</label>
+            <input class="form-control" type="file" name="services_cover_image_file" accept="image/jpeg,image/png,image/webp">
+            <?php if (!empty($services_cover_image)): ?>
+              <?php $services_cover_preview = (strpos($services_cover_image, 'http') === 0) ? $services_cover_image : (rtrim((string)BASE_URL, '/') . '/' . ltrim((string)$services_cover_image, '/')); ?>
+              <div class="mt-2"><img src="<?= h($services_cover_preview) ?>" alt="Services cover" style="max-width: 280px; width: 100%; border-radius: 10px; border: 1px solid #e2e8f0;"></div>
+              <div class="form-check mt-2">
+                <input class="form-check-input" type="checkbox" name="remove_services_cover_image" id="removeServicesCover">
+                <label class="form-check-label" for="removeServicesCover">Remove current Services cover</label>
+              </div>
+            <?php endif; ?>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label">Projects Page Cover</label>
+            <input class="form-control" type="file" name="projects_cover_image_file" accept="image/jpeg,image/png,image/webp">
+            <?php if (!empty($projects_cover_image)): ?>
+              <?php $projects_cover_preview = (strpos($projects_cover_image, 'http') === 0) ? $projects_cover_image : (rtrim((string)BASE_URL, '/') . '/' . ltrim((string)$projects_cover_image, '/')); ?>
+              <div class="mt-2"><img src="<?= h($projects_cover_preview) ?>" alt="Projects cover" style="max-width: 280px; width: 100%; border-radius: 10px; border: 1px solid #e2e8f0;"></div>
+              <div class="form-check mt-2">
+                <input class="form-check-input" type="checkbox" name="remove_projects_cover_image" id="removeProjectsCover">
+                <label class="form-check-label" for="removeProjectsCover">Remove current Projects cover</label>
+              </div>
+            <?php endif; ?>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label">Blog Page Cover</label>
+            <input class="form-control" type="file" name="blog_cover_image_file" accept="image/jpeg,image/png,image/webp">
+            <?php if (!empty($blog_cover_image)): ?>
+              <?php $blog_cover_preview = (strpos($blog_cover_image, 'http') === 0) ? $blog_cover_image : (rtrim((string)BASE_URL, '/') . '/' . ltrim((string)$blog_cover_image, '/')); ?>
+              <div class="mt-2"><img src="<?= h($blog_cover_preview) ?>" alt="Blog cover" style="max-width: 280px; width: 100%; border-radius: 10px; border: 1px solid #e2e8f0;"></div>
+              <div class="form-check mt-2">
+                <input class="form-check-input" type="checkbox" name="remove_blog_cover_image" id="removeBlogCover">
+                <label class="form-check-label" for="removeBlogCover">Remove current Blog cover</label>
+              </div>
+            <?php endif; ?>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label">Contact Page Cover</label>
+            <input class="form-control" type="file" name="contact_cover_image_file" accept="image/jpeg,image/png,image/webp">
+            <?php if (!empty($contact_cover_image)): ?>
+              <?php $contact_cover_preview = (strpos($contact_cover_image, 'http') === 0) ? $contact_cover_image : (rtrim((string)BASE_URL, '/') . '/' . ltrim((string)$contact_cover_image, '/')); ?>
+              <div class="mt-2"><img src="<?= h($contact_cover_preview) ?>" alt="Contact cover" style="max-width: 280px; width: 100%; border-radius: 10px; border: 1px solid #e2e8f0;"></div>
+              <div class="form-check mt-2">
+                <input class="form-check-input" type="checkbox" name="remove_contact_cover_image" id="removeContactCover">
+                <label class="form-check-label" for="removeContactCover">Remove current Contact cover</label>
+              </div>
+            <?php endif; ?>
+          </div>
+        </div>
+      </div>
+
       <div class="tab-pane fade" id="tab-footer">
         <label class="form-label">Footer Note</label>
         <textarea class="form-control" name="footer_note" rows="3"><?= h($footer_note) ?></textarea>
@@ -859,6 +968,7 @@ if ($tRes) $tpls = $tRes->fetch_all(MYSQLI_ASSOC);
           Save Settings
         </button>
       </div>
+
     </form>
 
   </div>
@@ -960,7 +1070,119 @@ document.addEventListener('DOMContentLoaded', function() {
       setTimeout(checkOverflow, 100);
     });
   });
-  
+
+  const testRecaptchaBtn = document.getElementById('testRecaptchaBtn');
+  const recaptchaTestResult = document.getElementById('recaptchaTestResult');
+
+  function setRecaptchaResult(message, type) {
+    if (!recaptchaTestResult) return;
+    const cls = type === 'success' ? 'text-success' : (type === 'warning' ? 'text-warning' : 'text-danger');
+    recaptchaTestResult.className = 'small mt-2 ' + cls;
+    recaptchaTestResult.textContent = message;
+  }
+
+  function loadRecaptcha(siteKey) {
+    return new Promise(function(resolve, reject) {
+      if (window.grecaptcha && typeof window.grecaptcha.execute === 'function') {
+        resolve();
+        return;
+      }
+
+      const existing = document.querySelector('script[data-recaptcha-loader="1"]');
+      if (existing) {
+        existing.remove();
+      }
+
+      const script = document.createElement('script');
+      script.src = 'https://www.google.com/recaptcha/api.js?render=' + encodeURIComponent(siteKey);
+      script.async = true;
+      script.defer = true;
+      script.setAttribute('data-recaptcha-loader', '1');
+      script.onload = function() { resolve(); };
+      script.onerror = function() { reject(new Error('Failed to load reCAPTCHA script.')); };
+      document.head.appendChild(script);
+    });
+  }
+
+  if (testRecaptchaBtn) {
+    testRecaptchaBtn.addEventListener('click', async function() {
+      const formEl = testRecaptchaBtn.closest('form');
+      if (!formEl) return;
+
+      const siteKeyInput = formEl.querySelector('input[name="recaptcha_site_key"]');
+      const secretKeyInput = formEl.querySelector('input[name="recaptcha_secret_key"]');
+      const csrfInput = formEl.querySelector('input[name="csrf"]');
+
+      const siteKey = (siteKeyInput ? siteKeyInput.value : '').trim();
+      const secretKey = (secretKeyInput ? secretKeyInput.value : '').trim();
+      const csrf = (csrfInput ? csrfInput.value : '').trim();
+      const action = 'admin_recaptcha_test';
+
+      if (!siteKey) {
+        setRecaptchaResult('Enter Site Key first, then test again.', 'warning');
+        return;
+      }
+
+      setRecaptchaResult('Testing reCAPTCHA v2/v3... please wait.', 'warning');
+
+      try {
+        await loadRecaptcha(siteKey);
+
+        if (!window.grecaptcha || typeof window.grecaptcha.execute !== 'function') {
+          setRecaptchaResult('reCAPTCHA not available in browser.', 'danger');
+          return;
+        }
+
+        const token = await new Promise(function(resolve, reject) {
+          window.grecaptcha.ready(async function() {
+            try {
+              const t = await window.grecaptcha.execute(siteKey, { action: action });
+              resolve(t);
+            } catch (err) {
+              reject(err);
+            }
+          });
+        });
+
+        const body = new FormData();
+        body.append('csrf', csrf);
+        body.append('token', token);
+        body.append('action', action);
+        body.append('secret_key', secretKey);
+
+        const resp = await fetch('<?= h(BASE_URL) ?>/admin/settings/recaptcha_test.php', {
+          method: 'POST',
+          body: body,
+          credentials: 'same-origin'
+        });
+
+        const raw = await resp.text();
+        let data = {};
+        try {
+          data = raw ? JSON.parse(raw) : {};
+        } catch (parseError) {
+          const looksLikeHtml = /^\s*</.test(raw);
+          setRecaptchaResult(
+            looksLikeHtml
+              ? 'Test failed: server returned HTML instead of JSON. Please refresh and sign in again, then retry.'
+              : 'Test failed: server returned invalid JSON. Check PHP errors/logs for recaptcha_test.php.',
+            'danger'
+          );
+          return;
+        }
+
+        if (!resp.ok) {
+          setRecaptchaResult(data.error || 'Test failed. Check configuration.', 'danger');
+          return;
+        }
+
+        setRecaptchaResult(data.message || (data.success ? 'Verification succeeded.' : 'Verification failed.'), data.success ? 'success' : 'danger');
+      } catch (error) {
+        setRecaptchaResult('Test could not complete: ' + (error && error.message ? error.message : 'unknown error'), 'danger');
+      }
+    });
+  }
+
   // Color scheme functionality - make it global
   window.applyColorScheme = function(primary, secondary, accent, mode = 'both') {
     const primaryInput = document.getElementById('primaryColor');
@@ -1350,153 +1572,6 @@ a:hover {
   };
 });
 </script>
-
-
-      <!-- Home Page -->
-      <div class="tab-pane fade" id="tab-home">
-        <div class="text-center py-5">
-          <div class="mb-4">
-            <i class="bi bi-house-gear-fill text-primary" style="font-size: 3rem;"></i>
-          </div>
-          <h5 class="mb-3">Homepage Settings</h5>
-          <p class="text-muted mb-4">Manage hero section, services preview, stats, and call-to-action content</p>
-          <a href="<?= BASE_URL ?>admin/home/index.php" class="btn btn-primary btn-lg">
-            <i class="bi bi-pencil-square me-2"></i>Edit Homepage Settings
-          </a>
-          <div class="mt-3">
-            <small class="text-muted">
-              Configure hero text, quick request form, service cards, statistics, and CTA section
-            </small>
-          </div>
-        </div>
-      </div>
-
-      <!-- About Page -->
-      <div class="tab-pane fade" id="tab-about">
-        <div class="text-center py-5">
-          <div class="mb-4">
-            <i class="bi bi-info-circle-fill text-primary" style="font-size: 3rem;"></i>
-          </div>
-          <h5 class="mb-3">About Page Settings</h5>
-          <p class="text-muted mb-4">Manage hero section, story, mission, vision, and values</p>
-          <a href="<?= BASE_URL ?>admin/about/index.php" class="btn btn-primary btn-lg">
-            <i class="bi bi-pencil-square me-2"></i>Edit About Settings
-          </a>
-          <div class="mt-3">
-            <small class="text-muted">
-              Configure about page hero title, subtitle, story, mission, vision, and company values
-            </small>
-          </div>
-        </div>
-      </div>
-
-      <?php
-$maint = setting_get_json($db, 'maintenance_settings', [
-  'enabled' => false,
-  'message' => 'We are updating the website. Please check back soon.',
-  'custom_html' => '',
-  'custom_css' => '',
-  'custom_js' => '',
-  'image_path' => '',
-  'image_mode' => 'cover',
-  'template_id' => null,
-]);
-
-// templates dropdown
-$tpls = [];
-$tRes = $db->query("SELECT id,title FROM maintenance_templates WHERE is_active=1 ORDER BY title ASC");
-if ($tRes) $tpls = $tRes->fetch_all(MYSQLI_ASSOC);
-?>
-<div class="tab-pane fade" id="tab-maint">
-  <div class="row g-3">
-
-    <div class="col-12">
-      <div class="form-check form-switch">
-        <input class="form-check-input" type="checkbox" name="maint[enabled]" value="1" <?= !empty($maint['enabled']) ? 'checked' : '' ?>>
-        <label class="form-check-label">Enable Under Construction Mode</label>
-      </div>
-      <div class="text-muted small mt-1">When enabled, visitors see the maintenance page (admins still access dashboard).</div>
-    </div>
-
-    <div class="col-md-6">
-      <label class="form-label">Template (Saved Page)</label>
-      <select class="form-select" name="maint[template_id]">
-        <option value="">None (use fields below)</option>
-        <?php foreach ($tpls as $t): ?>
-          <option value="<?= (int)$t['id'] ?>" <?= ((string)($maint['template_id'] ?? '') === (string)$t['id']) ? 'selected' : '' ?>>
-            <?= h($t['title']) ?>
-          </option>
-        <?php endforeach; ?>
-      </select>
-      <div class="form-text">If selected, the template HTML/CSS/JS is used (you can still add extra CSS/JS below).</div>
-    </div>
-
-    <div class="col-md-6">
-      <label class="form-label">Custom Message</label>
-      <input class="form-control" name="maint[message]" value="<?= h((string)($maint['message'] ?? '')) ?>">
-    </div>
-
-    <div class="col-md-6">
-      <label class="form-label">Cover Image</label>
-      <input class="form-control" type="file" name="maint_image" accept="image/*">
-      <?php if (!empty($maint['image_path'])): ?>
-        <div class="form-text">Current: <code><?= h((string)$maint['image_path']) ?></code></div>
-      <?php endif; ?>
-    </div>
-
-    <div class="col-md-6">
-      <label class="form-label">Image Mode</label>
-      <select class="form-select" name="maint[image_mode]">
-        <?php foreach (['cover','contain','center-crop'] as $m): ?>
-          <option value="<?= h($m) ?>" <?= (($maint['image_mode'] ?? 'cover') === $m) ? 'selected' : '' ?>><?= h($m) ?></option>
-        <?php endforeach; ?>
-      </select>
-      <div class="form-text">cover = fill, contain = show full, center-crop = crop center.</div>
-    </div>
-
-    <div class="col-12">
-      <label class="form-label">Custom HTML (optional)</label>
-      <textarea class="form-control" name="maint[custom_html]" rows="6"><?= h((string)($maint['custom_html'] ?? '')) ?></textarea>
-    </div>
-
-    <div class="col-12">
-      <label class="form-label">Custom CSS (optional)</label>
-      <textarea class="form-control" name="maint[custom_css]" rows="6"><?= h((string)($maint['custom_css'] ?? '')) ?></textarea>
-    </div>
-
-    <div class="col-12">
-      <label class="form-label">Custom JS (optional)</label>
-      <textarea class="form-control" name="maint[custom_js]" rows="6"><?= h((string)($maint['custom_js'] ?? '')) ?></textarea>
-      <div class="form-text">Keep JS simple—this runs on the maintenance page only.</div>
-    </div>
-
-    <div class="col-12 d-flex gap-2">
-      <a class="btn btn-outline-secondary" href="../maintenance/list.php">
-        Manage Templates
-      </a>
-    </div>
-
-  </div>
-</div>
-
-
-      <!-- Footer -->
-      <div class="tab-pane fade" id="tab-footer">
-        <label class="form-label">Footer Note</label>
-        <textarea class="form-control" name="footer_note" rows="3"><?= h($footer_note) ?></textarea>
-      </div>
-
-      <div class="d-flex justify-content-end gap-2 mt-3">
-        <button class="btn btn-primary" type="submit">
-          Save Settings
-        </button>
-      </div>
-    </form>
-
-  </div>
-</div>
-
-<?php require_once __DIR__ . '/../includes/admin_footer.php'; ?>
 
 <script>
 // Tab navigation functionality

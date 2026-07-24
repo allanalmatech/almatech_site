@@ -49,7 +49,9 @@ function list_slider_images(string $dir): array {
     ];
   }
 
-  usort($out, function ($a, $b) { return $b['mtime'] <=> $a['mtime']; });
+  usort($out, function ($a, $b) {
+    return $b['mtime'] <=> $a['mtime'];
+  });
   return $out;
 }
 

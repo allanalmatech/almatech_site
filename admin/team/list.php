@@ -10,7 +10,7 @@ require_admin_login();
 require_once __DIR__ . '/../../includes/db.php';
 
 $db = $GLOBALS['db'] ?? $mysqli ?? null;
-$UPLOAD_URL = BASE_URL . 'uploads/team';
+$UPLOAD_URL = rtrim((string)BASE_URL, '/') . '/uploads/team';
 
 $q = trim((string)($_GET['q'] ?? ''));
 $status = trim((string)($_GET['status'] ?? ''));

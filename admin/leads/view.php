@@ -2,6 +2,11 @@
 // admin/leads/view.php
 declare(strict_types=1);
 
+// Early authentication check before any HTML output
+require_once __DIR__ . '/../../includes/auth.php';
+require_once __DIR__ . '/../../includes/helpers.php';
+require_admin_login();
+
 $page_title    = "View Lead | Admin";
 $page_heading  = "Leads";
 $page_subtitle = "View enquiry details";
@@ -9,7 +14,6 @@ $active_admin  = "leads";
 
 require_once __DIR__ . '/../includes/admin_header.php';
 require_once __DIR__ . '/../includes/admin_sidebar.php';
-require_once __DIR__ . '/../../includes/helpers.php';
 require_once __DIR__ . '/../../includes/db.php';
 
 csrf_init();

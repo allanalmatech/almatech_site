@@ -327,7 +327,7 @@ $csrf = csrf_token();
 
             <div class="mt-2 border rounded p-2 bg-light d-flex align-items-center justify-content-center" style="min-height:110px;">
               <?php if (!empty($post['cover_image'])): ?>
-                <img src="<?= h(BASE_URL . ltrim((string)$post['cover_image'], '/')) ?>" alt="" style="max-height:110px;max-width:100%;object-fit:cover;border-radius:10px;">
+                <img src="<?= h(rtrim((string)BASE_URL, '/') . '/' . ltrim((string)$post['cover_image'], '/')) ?>" alt="" style="max-height:110px;max-width:100%;object-fit:cover;border-radius:10px;">
               <?php else: ?>
                 <div class="text-muted small">No cover image</div>
               <?php endif; ?>

@@ -174,7 +174,10 @@
 /* Desktop: make offcanvas behave as normal sidebar */
 @media (min-width: 992px){
   .offcanvas-lg.admin-sidebar{
-    position: static !important;
+    position: sticky !important;
+    top: 0;
+    align-self: flex-start;
+    height: 100vh;
     transform: none !important;
     visibility: visible !important;
   }

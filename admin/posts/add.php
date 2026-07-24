@@ -215,7 +215,7 @@ require_once __DIR__ . '/../includes/admin_sidebar.php';
             <div class="form-text">JPG/PNG/WEBP, max 3MB. Saved as /uploads/posts/…</div>
             <?php if ($cover_image): ?>
               <div class="mt-2">
-                <img src="<?= h($cover_image) ?>" style="max-height:110px;border-radius:10px;">
+                <img src="<?= h(rtrim((string)BASE_URL, '/') . '/' . ltrim((string)$cover_image, '/')) ?>" style="max-height:110px;border-radius:10px;">
               </div>
             <?php endif; ?>
           </div>

@@ -241,7 +241,7 @@ function status_badge_post(string $status): string {
                     <div class="d-flex align-items-center gap-2">
                       <?php if (!empty($r['cover_image'])): ?>
                         <img
-                          src="<?= h(BASE_URL . ltrim((string)$r['cover_image'], '/')) ?>"
+                          src="<?= h(rtrim((string)BASE_URL, '/') . '/' . ltrim((string)$r['cover_image'], '/')) ?>"
                           alt=""
                           style="width:44px;height:44px;object-fit:cover;border-radius:10px;"
                         >

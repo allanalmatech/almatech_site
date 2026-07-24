@@ -62,6 +62,9 @@
   border: 1px solid transparent;
   font-weight: 600;
   width: 100%;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
 }
 .admin-link i{
   font-size: 1.05rem;

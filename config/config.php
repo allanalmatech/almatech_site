@@ -7,6 +7,26 @@ if (session_status() === PHP_SESSION_NONE) {
 
 require_once dirname(__DIR__) . '/includes/env.php';
 
+if (!function_exists('str_starts_with')) {
+    function str_starts_with(string $haystack, string $needle): bool
+    {
+        if ($needle === '') {
+            return true;
+        }
+        return strpos($haystack, $needle) === 0;
+    }
+}
+
+if (!function_exists('str_contains')) {
+    function str_contains(string $haystack, string $needle): bool
+    {
+        if ($needle === '') {
+            return true;
+        }
+        return strpos($haystack, $needle) !== false;
+    }
+}
+
 if (!defined('DB_HOST')) {
     define('DB_HOST', (string)env_value('DB_HOST', 'localhost'));
 }
@@ -24,17 +44,36 @@ if (!defined('DB_PORT')) {
 }
 
 if (!defined('BASE_URL')) {
-    $baseUrl = rtrim((string)env_value('BASE_URL', '/'), '/') . '/';
-    define('BASE_URL', $baseUrl);
+    $envBase = rtrim((string)env_value('BASE_URL', ''), '/');
+    if ($envBase !== '') {
+        $baseUrl = $envBase;
+    } else {
+        $projectRoot = str_replace('\\', '/', dirname(__DIR__));
+        $docRoot = str_replace('\\', '/', (string)($_SERVER['DOCUMENT_ROOT'] ?? ''));
+        $baseUrl = '';
+
+        if ($docRoot !== '' && strpos($projectRoot, rtrim($docRoot, '/')) === 0) {
+            $baseUrl = substr($projectRoot, strlen(rtrim($docRoot, '/')));
+        }
+
+        $baseUrl = '/' . trim((string)$baseUrl, '/');
+    }
+    define('BASE_URL', rtrim($baseUrl, '/') . '/');
 }
 if (!defined('ADMIN_URL')) {
-    define('ADMIN_URL', rtrim((string)env_value('ADMIN_URL', rtrim(BASE_URL, '/') . '/admin/'), '/') . '/');
+    define('ADMIN_URL', rtrim((string)env_value('ADMIN_URL', rtrim((string)BASE_URL, '/') . '/admin/'), '/') . '/');
 }
 if (!defined('UPLOAD_PRODUCTS_PATH')) {
     define('UPLOAD_PRODUCTS_PATH', dirname(__DIR__) . '/uploads/products/');
 }
 if (!defined('UPLOAD_CATEGORIES_PATH')) {
     define('UPLOAD_CATEGORIES_PATH', dirname(__DIR__) . '/uploads/categories/');
+}
+if (!defined('UPLOAD_SHOP_PATH')) {
+    define('UPLOAD_SHOP_PATH', dirname(__DIR__) . '/uploads/shop/');
+}
+if (!defined('UPLOAD_REQUESTS_PATH')) {
+    define('UPLOAD_REQUESTS_PATH', dirname(__DIR__) . '/uploads/requests/');
 }
 
 $GLOBALS['BASE_URL'] = BASE_URL;

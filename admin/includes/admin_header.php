@@ -22,9 +22,9 @@ if (!isset($active_admin)) $active_admin = "dashboard";
 
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="/almatech_site/assets/css/main.css">
-  <link rel="stylesheet" href="/almatech_site/assets/css/admin.css">
-  <link rel="stylesheet" href="/almatech_site/assets/css/admin_sidebar.css">
+  <link rel="stylesheet" href="<?= rtrim((string)BASE_URL, '/') ?>/assets/css/main.css">
+  <link rel="stylesheet" href="<?= rtrim((string)BASE_URL, '/') ?>/assets/css/admin.css">
+  <link rel="stylesheet" href="<?= rtrim((string)BASE_URL, '/') ?>/assets/css/admin_sidebar.css">
 </head>
 <body class="admin-shell">
 

@@ -26,7 +26,7 @@ try {
     }
 
     // Security: Only allow files in assets/brand directory
-    if (strpos($url, 'assets/brand/') !== 0) {
+    if (strpos((string)$url, 'assets/brand/') !== 0) {
         throw new Exception('Invalid file path');
     }
 

@@ -11,12 +11,6 @@ require_once __DIR__ . '/../../includes/db.php';
 if (session_status() === PHP_SESSION_NONE) session_start();
 csrf_init();
 
-function slugify(string $text): string {
-  $text = strtolower(trim($text));
-  $text = preg_replace('/[^a-z0-9]+/', '-', $text);
-  return trim($text, '-');
-}
-
 $title = $short_desc = $description = '';
 $is_active = 1;
 $errors = [];

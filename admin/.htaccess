@@ -1,0 +1,26 @@
+# Admin Area Routing
+RewriteEngine On
+
+# If someone visits /admin or /admin/
+RewriteRule ^$ login.php [L,QSA]
+
+
+# If someone visits /admin/index.php
+RewriteRule ^index\.php$ login.php [L,QSA]
+
+# (Optional) Pretty URLs for admin pages
+# /admin/dashboard -> dashboard.php
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^([a-zA-Z0-9_-]+)/?$ $1.php [L,QSA]
+
+# Security: block access to dotfiles
+<FilesMatch "^\.">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+  </IfModule>
+</FilesMatch>

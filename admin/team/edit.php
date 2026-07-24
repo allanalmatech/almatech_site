@@ -144,7 +144,7 @@ $BASE = rtrim((string)($GLOBALS['BASE_URL'] ?? (defined('BASE_URL') ? BASE_URL :
 
 // If your uploads are in /admin/uploads/team/, change here accordingly.
 // Your current script uses /uploads/team/ (public root).
-$photoUrl = $current_photo ? ($BASE . "/uploads/team/" . rawurlencode($current_photo)) : '';
+$photoUrl = $current_photo ? (rtrim((string)$BASE, '/') . "/uploads/team/" . rawurlencode($current_photo)) : '';
 ?>
 <div class="admin-main">
   <?php require_once __DIR__ . '/../includes/admin_topbar.php'; ?>

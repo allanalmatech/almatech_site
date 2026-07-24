@@ -139,14 +139,66 @@ $social = setting_get_json($db, 'social_links', [
   </div>
 </footer>
 
+<!-- Product Share Modal -->
+<div class="modal fade" id="productShareModal" tabindex="-1" aria-labelledby="productShareModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-bold" id="productShareModalLabel">Share Product</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-4">
+          <label for="sharePreviewText" class="form-label text-muted small fw-semibold">Message Preview</label>
+          <div class="d-flex gap-3 align-items-start bg-light p-3 rounded border">
+            <img id="sharePreviewImage" src="" alt="Product" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px; display: none;">
+            <textarea id="sharePreviewText" class="form-control border-0 bg-transparent p-0" rows="8" readonly style="resize: none; box-shadow: none;"></textarea>
+          </div>
+        </div>
+        <div class="d-flex flex-wrap gap-2 justify-content-center">
+          <button type="button" class="btn btn-outline-secondary px-4" id="btnShareCopy" title="Copy Link" aria-label="Copy Link">
+            <i class="bi bi-clipboard"></i>
+          </button>
+          <a href="#" class="btn btn-whatsapp flex-fill" id="btnShareWhatsapp" target="_blank" rel="noopener">
+            <i class="bi bi-whatsapp me-1"></i> WhatsApp
+          </a>
+          <button type="button" class="btn btn-primary flex-fill d-none" id="btnShareNative">
+            <i class="bi bi-share me-1"></i> More
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="<?= BASE_URL ?>assets/js/stats-counter.js"></script>
+<script src="<?= rtrim((string)BASE_URL, '/') ?>/assets/js/stats-counter.js"></script>
 <script>
 function slideById(id, dir=1){
   const el = document.getElementById(id);
   if(!el) return;
   el.scrollBy({ left: dir * Math.max(260, el.clientWidth * 0.7), behavior:'smooth' });
 }
+
+(function () {
+  const heroes = document.querySelectorAll('.hero-scroll-blur');
+  if (!heroes.length) return;
+
+  const maxBlur = 6;
+  const maxScroll = 320;
+
+  function updateHeroBlur() {
+    const y = window.scrollY || window.pageYOffset || 0;
+    const ratio = Math.min(y / maxScroll, 1);
+    const blurValue = (ratio * maxBlur).toFixed(2) + 'px';
+    heroes.forEach((hero) => {
+      hero.style.setProperty('--hero-scroll-blur', blurValue);
+    });
+  }
+
+  updateHeroBlur();
+  window.addEventListener('scroll', updateHeroBlur, { passive: true });
+})();
 </script>
 
 </body>

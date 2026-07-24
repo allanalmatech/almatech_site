@@ -56,35 +56,44 @@ $productsStmt->execute();
 $products = $productsStmt->fetchAll();
 
 $BASE = rtrim((string)BASE_URL, '/');
-$coverStyle = '';
+$scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+$host = $_SERVER['HTTP_HOST'] ?? 'www.almatechconsults.com';
+$ORIGIN = $scheme . '://' . $host;
+$categoryHeroCover = '';
 if (!empty($category['cover_image'])) {
-    $coverStyle = "background-image: linear-gradient(rgba(11,18,32,.55), rgba(11,18,32,.45)), url('" . h($BASE . '/uploads/categories/' . rawurlencode((string)$category['cover_image'])) . "'); background-size: cover; background-position: center; color: #fff;";
+    $categoryHeroCover = rtrim((string)$BASE, '/') . '/uploads/categories/' . rawurlencode((string)$category['cover_image']);
+}
+if ($categoryHeroCover === '') {
+    $categoryHeroCover = shop_hero_cover_url(setting('shop_hero_cover', '')) ?? '';
 }
 $page_title = (string)$category['name'] . ' | Shop | Alma Tech Consults';
 require_once __DIR__ . '/../includes/header.php';
 ?>
 
-<section class="hero" style="<?= $coverStyle ?>">
+<section class="hero<?= $categoryHeroCover !== '' ? ' shop-hero-cover hero-scroll-blur' : '' ?>"<?= $categoryHeroCover !== '' ? ' style="--shop-hero-cover:url(\'' . h($categoryHeroCover) . '\');"' : '' ?>>
   <div class="container py-5">
     <div class="badge-soft mb-3"><i class="bi bi-tags-fill me-1"></i> Category</div>
     <h1 class="display-6 fw-bold mb-2"><?= h((string)$category['name']) ?></h1>
-    <p class="lead <?= $coverStyle !== '' ? '' : 'text-muted' ?> mb-0"><?= h((string)$category['description']) ?></p>
+    <p class="lead text-muted mb-0"><?= h((string)$category['description']) ?></p>
   </div>
 </section>
 
-<section class="section">
-  <div class="container">
-    <form class="row g-2 mb-4">
+<section class="section shop-page-section">
+  <div class="container shop-page-container">
+    <form class="row g-2 mb-4 align-items-end">
       <input type="hidden" name="slug" value="<?= h($slug) ?>">
-      <div class="col-md-3">
+      <div class="col-6 col-md-3">
         <select class="form-select" name="sort" onchange="this.form.submit()">
           <option value="newest" <?= $sort === 'newest' ? 'selected' : '' ?>>Newest</option>
           <option value="price_asc" <?= $sort === 'price_asc' ? 'selected' : '' ?>>Price low to high</option>
           <option value="price_desc" <?= $sort === 'price_desc' ? 'selected' : '' ?>>Price high to low</option>
         </select>
       </div>
-      <div class="col-md-3">
-        <a class="btn btn-outline-orange w-100" href="<?= h($BASE) ?>/shop/">Back to Shop</a>
+      <div class="col-auto">
+        <a class="btn btn-outline-orange" href="<?= h($BASE) ?>/shop/">Back to Shop</a>
+      </div>
+      <div class="col-auto">
+        <a class="btn btn-orange" href="<?= h($BASE) ?>/shop/request"><i class="bi bi-plus-circle me-1"></i>Request a Gadget</a>
       </div>
     </form>
 
@@ -113,9 +122,10 @@ require_once __DIR__ . '/../includes/header.php';
                   <div class="small text-success">Sale: <?= h(format_currency((float)$product['discount_price'])) ?></div>
                 <?php endif; ?>
               </div>
-              <div class="d-grid gap-2 mt-auto">
-                <a href="<?= h($BASE) ?>/shop/product/<?= rawurlencode((string)$product['slug']) ?>" class="btn btn-outline-orange"><i class="bi bi-eye me-1"></i>View Product</a>
-                <button type="button" class="btn btn-orange" data-wa-order data-wa-number="<?= h(whatsapp_number()) ?>" data-product-name="<?= h((string)$product['name']) ?>" data-price-label="<?= h(format_currency((float)$product['price'])) ?>" data-discount-label="<?= !empty($product['discount_price']) ? h(format_currency((float)$product['discount_price'])) : '' ?>" data-product-link="<?= h($BASE) ?>/shop/product/<?= rawurlencode((string)$product['slug']) ?>"><i class="bi bi-whatsapp me-1"></i>Place Order</button>
+              <div class="d-flex gap-2 mt-auto">
+                <a href="<?= h($BASE) ?>/shop/product/<?= rawurlencode((string)$product['slug']) ?>" class="btn btn-outline-orange flex-fill"><i class="bi bi-eye me-1"></i>View</a>
+                <button type="button" class="btn btn-whatsapp flex-fill" data-wa-order data-wa-number="<?= h((string)whatsapp_number()) ?>" data-product-name="<?= h((string)($product['name'] ?? 'Product')) ?>" data-price-label="<?= h(format_currency((float)($product['price'] ?? 0))) ?>" data-discount-label="<?= h(!empty($product['discount_price']) ? format_currency((float)$product['discount_price']) : '') ?>" data-product-link="<?= h($ORIGIN . $BASE . '/shop/product/' . rawurlencode((string)($product['slug'] ?? ''))) ?>"><i class="bi bi-whatsapp me-1"></i>Order</button>
+                <button type="button" class="btn btn-share-icon" data-product-share data-share-title="<?= h((string)$product['name']) ?>" data-share-text="<?= h('Check out this product from Alma Tech Consults: ' . (string)$product['name']) ?>" data-share-url="<?= h($ORIGIN . $BASE . '/shop/product/' . rawurlencode((string)($product['slug'] ?? ''))) ?>" data-share-image="<?= h(product_image_url((string)$product['main_image'])) ?>" aria-label="Share <?= h((string)$product['name']) ?>" title="Share product"><i class="bi bi-share-fill"></i></button>
               </div>
             </div>
           </div>

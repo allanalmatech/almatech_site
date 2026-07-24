@@ -65,3 +65,139 @@ if (!function_exists('csrf_verify')) {
     }
   }
 }
+
+if (!function_exists('recaptcha_verify_token')) {
+  function recaptcha_verify_token(string $secretKey, string $token, $remoteIp = null, string $expectedAction = '', float $minScore = 0.3): bool {
+    $secretKey = trim($secretKey);
+    $token = trim($token);
+    if ($token === '') {
+      return false;
+    }
+
+    if ($secretKey === '') {
+      return false;
+    }
+
+    $payload = http_build_query([
+      'secret' => $secretKey,
+      'response' => $token,
+      'remoteip' => (string)$remoteIp,
+    ]);
+
+    $responseBody = '';
+
+    if (function_exists('curl_init')) {
+      $ch = curl_init('https://www.google.com/recaptcha/api/siteverify');
+      if ($ch !== false) {
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 12);
+        $responseBody = (string)curl_exec($ch);
+        curl_close($ch);
+      }
+    }
+
+    if ($responseBody === '') {
+      $context = stream_context_create([
+        'http' => [
+          'method' => 'POST',
+          'header' => "Content-Type: application/x-www-form-urlencoded\r\n",
+          'content' => $payload,
+          'timeout' => 12,
+        ],
+      ]);
+      $fallback = @file_get_contents('https://www.google.com/recaptcha/api/siteverify', false, $context);
+      $responseBody = $fallback !== false ? (string)$fallback : '';
+    }
+
+    if ($responseBody === '') {
+      return false;
+    }
+
+    $decoded = json_decode($responseBody, true);
+    if (!is_array($decoded) || empty($decoded['success'])) {
+      return false;
+    }
+
+    if ($expectedAction !== '') {
+      $actualAction = trim((string)($decoded['action'] ?? ''));
+      if ($actualAction !== '' && !hash_equals($expectedAction, $actualAction)) {
+        return false;
+      }
+    }
+
+    $score = isset($decoded['score']) ? (float)$decoded['score'] : 1.0;
+    return $score >= $minScore;
+  }
+}
+
+
+
+if (!function_exists('captcha_create')) {
+  function captcha_create(string $formKey): array {
+    if (session_status() === PHP_SESSION_NONE) {
+      session_start();
+    }
+
+    $a = random_int(2, 9);
+    $b = random_int(1, 8);
+    $operator = random_int(0, 1) === 1 ? '+' : '-';
+    if ($operator === '-' && $b > $a) {
+      $tmp = $a;
+      $a = $b;
+      $b = $tmp;
+    }
+
+    $answer = $operator === '+' ? ($a + $b) : ($a - $b);
+    $token = bin2hex(random_bytes(8));
+
+    if (!isset($_SESSION['captcha']) || !is_array($_SESSION['captcha'])) {
+      $_SESSION['captcha'] = [];
+    }
+
+    $_SESSION['captcha'][$formKey] = [
+      'token' => $token,
+      'answer' => (string)$answer,
+      'expires_at' => time() + 900,
+    ];
+
+    return [
+      'question' => $a . ' ' . $operator . ' ' . $b . ' = ?',
+      'token' => $token,
+    ];
+  }
+}
+
+if (!function_exists('captcha_render')) {
+  function captcha_render(string $formKey, string $label = 'Captcha', bool $required = true): string {
+    $captcha = captcha_create($formKey);
+    $requiredAttr = $required ? ' required' : '';
+    return '<div class="col-md-6">'
+      . '<label class="form-label">' . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . ' *</label>'
+      . '<input type="hidden" name="captcha_token" value="' . htmlspecialchars((string)$captcha['token'], ENT_QUOTES, 'UTF-8') . '">'
+      . '<input class="form-control" name="captcha_answer" placeholder="Solve: ' . htmlspecialchars((string)$captcha['question'], ENT_QUOTES, 'UTF-8') . '"' . $requiredAttr . '>'
+      . '</div>';
+  }
+}
+
+if (!function_exists('captcha_validate_submission')) {
+  function captcha_validate_submission(string $formKey, $token, $answer): bool {
+    if (session_status() === PHP_SESSION_NONE) {
+      session_start();
+    }
+
+    $row = $_SESSION['captcha'][$formKey] ?? null;
+    unset($_SESSION['captcha'][$formKey]);
+
+    if (!is_array($row)) {
+      return false;
+    }
+
+    $validToken = hash_equals((string)($row['token'] ?? ''), (string)$token);
+    $validTime = ((int)($row['expires_at'] ?? 0) >= time());
+    $validAnswer = hash_equals(trim((string)($row['answer'] ?? '')), trim((string)$answer));
+
+    return $validToken && $validTime && $validAnswer;
+  }
+}

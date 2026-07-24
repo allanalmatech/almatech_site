@@ -222,7 +222,7 @@ require_once __DIR__ . '/../includes/admin_sidebar.php';
         <div class="d-flex align-items-center gap-3">
           <div style="width:64px;height:64px;border-radius:50%;overflow:hidden;background:#f2f2f2;">
             <?php if ($photo): ?>
-              <img src="<?= BASE_URL ?>uploads/testimonials/<?= htmlspecialchars($photo) ?>" alt="photo" style="width:100%;height:100%;object-fit:cover;" onerror="console.log('Image failed to load:', this.src);">
+              <img src="<?= h(rtrim((string)BASE_URL, '/') . '/uploads/testimonials/' . rawurlencode((string)$photo)) ?>" alt="photo" style="width:100%;height:100%;object-fit:cover;" onerror="console.log('Image failed to load:', this.src);">
             <?php else: ?>
               <div class="h-100 d-flex align-items-center justify-content-center text-muted">
                 <i class="bi bi-person"></i>

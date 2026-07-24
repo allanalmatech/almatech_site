@@ -63,10 +63,22 @@ require_once __DIR__ . '/includes/header.php';
 
 // Base URL safe join
 $BASE = defined('BASE_URL') ? rtrim((string)BASE_URL, '/') : '';
+
+$projectsHeroCover = '';
+$projectsHeroTextClass = 'text-muted';
+if ($db instanceof mysqli && function_exists('setting_get')) {
+  $projectsCover = trim((string)setting_get($db, 'projects_cover_image', ''));
+  if ($projectsCover !== '') {
+    $projectsHeroCover = (strpos($projectsCover, 'http') === 0)
+      ? $projectsCover
+      : $BASE . '/' . ltrim($projectsCover, '/');
+    $projectsHeroTextClass = '';
+  }
+}
 ?>
 
 <!-- Page Hero -->
-<section class="hero">
+<section class="hero<?= $projectsHeroCover !== '' ? ' hero-cover-blur hero-scroll-blur' : '' ?>"<?= $projectsHeroCover !== '' ? ' style="--hero-cover-image:url(\'' . h($projectsHeroCover) . '\');"' : '' ?>>
   <div class="container py-5">
     <div class="row g-4 align-items-center">
       <div class="col-lg-8">
@@ -74,7 +86,7 @@ $BASE = defined('BASE_URL') ? rtrim((string)BASE_URL, '/') : '';
           <i class="bi bi-briefcase-fill me-1"></i> Portfolio
         </div>
         <h1 class="display-6 fw-bold mb-3">Projects we’ve delivered for clients.</h1>
-        <p class="lead text-muted mb-0">
+        <p class="lead <?= $projectsHeroTextClass ?> mb-0">
           Explore our work across websites, branding, digital marketing, IT support, and connectivity solutions.
         </p>
       </div>
@@ -120,7 +132,7 @@ $BASE = defined('BASE_URL') ? rtrim((string)BASE_URL, '/') : '';
           $cover = (string)$p['cover'];
 
           // safe join for image + project url
-          $image_url = $BASE ? ($BASE . '/' . ltrim($cover, '/')) : ltrim($cover, '/');
+          $image_url = $BASE ? (rtrim((string)$BASE, '/') . '/' . ltrim($cover, '/')) : ltrim($cover, '/');
 
           // Use external URL if available, otherwise use internal project page
           if (!empty($p['project_url'])) {
