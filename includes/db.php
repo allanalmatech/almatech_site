@@ -9,8 +9,13 @@ $db_pass = (string)env_value('DB_PASS', '');
 $db_name = (string)env_value('DB_NAME', '');
 $db_port = (int)env_value('DB_PORT', '3306');
 
-$mysqli = new mysqli($db_host, $db_user, $db_pass, $db_name, $db_port);
-if ($mysqli->connect_errno) {
+try {
+  $mysqli = new mysqli($db_host, $db_user, $db_pass, $db_name, $db_port);
+} catch (Throwable $e) {
+  $mysqli = null;
+}
+
+if (!$mysqli instanceof mysqli || $mysqli->connect_errno) {
   $GLOBALS['db'] = null;
 } else {
   $mysqli->set_charset("utf8mb4");
