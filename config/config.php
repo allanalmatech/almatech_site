@@ -1,6 +1,11 @@
 <?php
 declare(strict_types=1);
 
+if (PHP_VERSION_ID < 80100) {
+    http_response_code(500);
+    exit('This site requires PHP 8.1 or newer. Current version: ' . PHP_VERSION);
+}
+
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
