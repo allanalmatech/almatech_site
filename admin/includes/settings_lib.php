@@ -2,6 +2,8 @@
 // admin/includes/settings_lib.php
 declare(strict_types=1);
 
+require_once __DIR__ . '/../../includes/mysqli_compat.php';
+
 function setting_get(?mysqli $db, string $key, string $default = null) {
   if (!$db instanceof mysqli) return $default;
   $stmt = $db->prepare("SELECT `value` FROM settings WHERE `key` = ? LIMIT 1");

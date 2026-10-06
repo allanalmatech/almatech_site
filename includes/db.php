@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/env.php';
+require_once __DIR__ . '/mysqli_compat.php';
 
 $db_host = (string)env_value('DB_HOST', 'localhost');
 $db_user = (string)env_value('DB_USER', '');
